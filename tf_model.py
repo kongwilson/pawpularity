@@ -67,6 +67,7 @@ def Conv2D_NET(input_shape):
 	model.add(Dropout(0.25))
 
 	model.add(Conv2D(
+		128, (3, 3), padding="same",
 		kernel_initializer=init, kernel_regularizer=reg))
 	model.add(Activation("relu"))
 	model.add(BatchNormalization(axis=chanDim))
