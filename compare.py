@@ -6,9 +6,9 @@ Copyright (C) Weicong Kong, 10/10/2021
 from sklearn.metrics import mean_squared_error
 from tqdm import tqdm
 
-from kaggle.pawpularity.loader import *
-from kaggle.pawpularity.model import PawpularityNN
-from kaggle.pawpularity.utils import *
+from loader import *
+from model import PawpularityNN
+from utils import *
 
 
 if __name__ == '__main__':
