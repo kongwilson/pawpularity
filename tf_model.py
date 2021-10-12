@@ -113,7 +113,7 @@ if __name__ == '__main__':
 	kaggle_train_images = []
 	i = 0
 	for i, img_path in enumerate(tqdm(train['file_path'])):
-		if img_path.split("/")[-1] in os.listdir(os.path.join(data_root, 'train')):
+		if img_path.split(os.path.sep)[-1] in os.listdir(os.path.join(data_root, 'train')):
 			img = cv2.imread(img_path)
 			img = cv2.resize(img, (128, 128))
 			kaggle_train_images.append(img)
@@ -124,7 +124,7 @@ if __name__ == '__main__':
 	kaggle_test_images = []
 	i = 0
 	for i, img_path in enumerate(test['file_path']):
-		if img_path.split("/")[-1] in os.listdir(os.path.join(data_root, 'test')):
+		if img_path.split(os.path.sep)[-1] in os.listdir(os.path.join(data_root, 'test')):
 			img = cv2.imread(img_path)
 			img = cv2.resize(img, (128, 128))
 			kaggle_test_images.append(img)
