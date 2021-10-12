@@ -45,7 +45,7 @@ import torch.optim as optim
 # Metrics
 from sklearn.metrics import mean_squared_error
 
-from kaggle.pawpularity.utils import data_root
+from utils import data_root
 
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 warnings.filterwarnings('ignore', category=FutureWarning)
@@ -411,89 +411,95 @@ def validate_fn(val_loader, model, criterion, epoch, params):
     return final_outputs, final_targets
 
 
-# RUN
-best_models_of_each_fold = []
-rmse_tracker = []
 
-for fold in TRAIN_FOLDS:
-    print(''.join(['#'] * 50))
-    print(f"{''.join(['='] * 15)} TRAINING FOLD: {fold + 1}/{train_df['kfold'].nunique()} {''.join(['='] * 15)}")
-    # Data Split to train and Validation
-    train = train_df[train_df['kfold'] != fold]
-    valid = train_df[train_df['kfold'] == fold]
+def train():
+    # RUN
+    best_models_of_each_fold = []
+    rmse_tracker = []
 
-    X_train = train['image_path']
-    X_train_dense = train[params['dense_features']]
-    y_train = train['Pawpularity'] / 100
-    X_valid = valid['image_path']
-    X_valid_dense = valid[params['dense_features']]
-    y_valid = valid['Pawpularity'] / 100
+    for fold in TRAIN_FOLDS:
+        print(''.join(['#'] * 50))
+        print(f"{''.join(['='] * 15)} TRAINING FOLD: {fold + 1}/{train_df['kfold'].nunique()} {''.join(['='] * 15)}")
+        # Data Split to train and Validation
+        train = train_df[train_df['kfold'] != fold]
+        valid = train_df[train_df['kfold'] == fold]
 
-    # Pytorch Dataset Creation
-    train_dataset = CuteDataset(
-        images_filepaths=X_train.values,
-        dense_features=X_train_dense.values,
-        targets=y_train.values,
-        transform=get_train_transforms()
-    )
+        X_train = train['image_path']
+        X_train_dense = train[params['dense_features']]
+        y_train = train['Pawpularity'] / 100
+        X_valid = valid['image_path']
+        X_valid_dense = valid[params['dense_features']]
+        y_valid = valid['Pawpularity'] / 100
 
-    valid_dataset = CuteDataset(
-        images_filepaths=X_valid.values,
-        dense_features=X_valid_dense.values,
-        targets=y_valid.values,
-        transform=get_valid_transforms()
-    )
+        # Pytorch Dataset Creation
+        train_dataset = CuteDataset(
+            images_filepaths=X_train.values,
+            dense_features=X_train_dense.values,
+            targets=y_train.values,
+            transform=get_train_transforms()
+        )
 
-    # Pytorch Dataloader creation
-    train_loader = DataLoader(
-        train_dataset, batch_size=params['batch_size'], shuffle=True,
-        num_workers=params['num_workers'], pin_memory=True
-    )
+        valid_dataset = CuteDataset(
+            images_filepaths=X_valid.values,
+            dense_features=X_valid_dense.values,
+            targets=y_valid.values,
+            transform=get_valid_transforms()
+        )
 
-    val_loader = DataLoader(
-        valid_dataset, batch_size=params['batch_size'], shuffle=False,
-        num_workers=params['num_workers'], pin_memory=True
-    )
+        # Pytorch Dataloader creation
+        train_loader = DataLoader(
+            train_dataset, batch_size=params['batch_size'], shuffle=True,
+            num_workers=params['num_workers'], pin_memory=True
+        )
 
-    # Model, cost function and optimizer instancing
-    model = PetNet()
-    model = model.to(params['device'])
-    criterion = nn.BCEWithLogitsLoss()
-    optimizer = torch.optim.AdamW(model.parameters(), lr=params['lr'],
-                                  weight_decay=params['weight_decay'],
-                                  amsgrad=False)
-    scheduler = get_scheduler(optimizer)
+        val_loader = DataLoader(
+            valid_dataset, batch_size=params['batch_size'], shuffle=False,
+            num_workers=params['num_workers'], pin_memory=True
+        )
 
-    # Training and Validation Loop
-    best_rmse = np.inf
-    best_epoch = np.inf
-    best_model_name = None
-    for epoch in range(1, params['epochs'] + 1):
-        train_fn(train_loader, model, criterion, optimizer, epoch, params, scheduler)
-        predictions, valid_targets = validate_fn(val_loader, model, criterion, epoch, params)
-        rmse = round(mean_squared_error(valid_targets, predictions, squared=False), 3)
-        if rmse < best_rmse:
-            best_rmse = rmse
-            best_epoch = epoch
-            if best_model_name is not None:
-                os.remove(best_model_name)
-            torch.save(model.state_dict(),
-                       f"{params['model']}_{epoch}_epoch_f{fold + 1}_{rmse}_rmse.pth")
-            best_model_name = f"{params['model']}_{epoch}_epoch_f{fold + 1}_{rmse}_rmse.pth"
+        # Model, cost function and optimizer instancing
+        model = PetNet()
+        model = model.to(params['device'])
+        criterion = nn.BCEWithLogitsLoss()
+        optimizer = torch.optim.AdamW(model.parameters(), lr=params['lr'],
+                                      weight_decay=params['weight_decay'],
+                                      amsgrad=False)
+        scheduler = get_scheduler(optimizer)
 
-    # Print summary of this fold
+        # Training and Validation Loop
+        best_rmse = np.inf
+        best_epoch = np.inf
+        best_model_name = None
+        for epoch in range(1, params['epochs'] + 1):
+            train_fn(train_loader, model, criterion, optimizer, epoch, params, scheduler)
+            predictions, valid_targets = validate_fn(val_loader, model, criterion, epoch, params)
+            rmse = round(mean_squared_error(valid_targets, predictions, squared=False), 3)
+            if rmse < best_rmse:
+                best_rmse = rmse
+                best_epoch = epoch
+                if best_model_name is not None:
+                    os.remove(best_model_name)
+                torch.save(model.state_dict(),
+                           f"{params['model']}_{epoch}_epoch_f{fold + 1}_{rmse}_rmse.pth")
+                best_model_name = f"{params['model']}_{epoch}_epoch_f{fold + 1}_{rmse}_rmse.pth"
+
+        # Print summary of this fold
+        print('')
+        print(f'The best RMSE: {best_rmse} for fold {fold + 1} was achieved on epoch: {best_epoch}.')
+        print(f'The Best saved model is: {best_model_name}')
+        best_models_of_each_fold.append(best_model_name)
+        rmse_tracker.append(best_rmse)
+        print(''.join(['#'] * 50))
+        del model
+        gc.collect()
+        torch.cuda.empty_cache()
+
     print('')
-    print(f'The best RMSE: {best_rmse} for fold {fold + 1} was achieved on epoch: {best_epoch}.')
-    print(f'The Best saved model is: {best_model_name}')
-    best_models_of_each_fold.append(best_model_name)
-    rmse_tracker.append(best_rmse)
-    print(''.join(['#'] * 50))
-    del model
-    gc.collect()
-    torch.cuda.empty_cache()
+    print(f'Average RMSE of all folds: {round(np.mean(rmse_tracker), 4)}')
 
-print('')
-print(f'Average RMSE of all folds: {round(np.mean(rmse_tracker), 4)}')
+    for i, name in enumerate(best_models_of_each_fold):
+        print(f'Best model of fold {i+1}: {name}')
 
-for i, name in enumerate(best_models_of_each_fold):
-    print(f'Best model of fold {i+1}: {name}')
+
+if __name__ == '__main__':
+    train()
