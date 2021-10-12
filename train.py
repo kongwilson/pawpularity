@@ -9,9 +9,9 @@ import torch.optim as optim
 import torch.nn.functional as F
 from tqdm import tqdm
 
-from kaggle.pawpularity.loader import get_loader
-from kaggle.pawpularity.model import PawpularityNN
-from kaggle.pawpularity.utils import *
+from loader import get_loader
+from model import PawpularityNN
+from utils import *
 
 
 def train():
