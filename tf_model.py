@@ -178,7 +178,7 @@ if __name__ == '__main__':
 		steps_per_epoch=len(all_images) // 256,
 		epochs=60, callbacks=[checkpoint, learning_rate_reduction, EarlyStopper])
 
-	loaded_model = load_model("/kaggle/working/paws_c2d_v4.h5")
+	loaded_model = load_model(os.path.join(data_root, 'paws_c2d_v4.h5'))
 	norm_test = np.copy(kaggle_test_images)
 	norm_test = norm_test / 255
 	test_pred = loaded_model.predict(norm_test)
