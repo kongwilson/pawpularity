@@ -115,3 +115,15 @@ class PawBenchmark(nn.Module):
 		return output
 
 
+class PawClassifier(PawBenchmark):
+
+	def __init__(
+			self, in_width, in_height, in_chan, dense_feature_size, embed_size, hidden_size, output_size=1,
+			kernel_size=3, stride=1, dilation=1, dropout=0.5):
+		super(PawBenchmark, self).__init__()
+
+	def forward(self, image, dense):
+		x = super(PawBenchmark, self).forward(image, dense)
+		output = nn.Sigmoid()(x)
+		return output
+

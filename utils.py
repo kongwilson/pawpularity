@@ -55,14 +55,18 @@ transform = transforms.Compose(
 	]
 )
 
+# WKNOTE: Data augmentation, some of them may hurt the model. It's suggested no roration should be made:
+#   https://www.kaggle.com/weicongkong/tf-petfinder-vit-cls-tpu-train/edit
 transform2 = transforms.Compose(
 	[
 		transforms.ToPILImage(),  # WKNOTE: transforms only works with PIL images
-		transforms.Resize((356, 356)),
+		transforms.Resize((256, 256)),
 		transforms.RandomHorizontalFlip(p=0.5),  # WKNOTE: randomly flip the image with the given prob
 		transforms.RandomVerticalFlip(p=0.5),
-		transforms.RandomRotation(degrees=180),  # WKNOTE: rotate between -180 to +180
-		transforms.RandomCrop((256, 256)),  # we are doing some sort of data augmentation here
+		transforms.RandomAutocontrast(p=0.3),
+		transforms.RandomAdjustSharpness(sharpness_factor=2, p=0.5),
+		# transforms.RandomRotation(degrees=180),  # WKNOTE: rotate between -180 to +180
+		# transforms.RandomCrop((256, 256)),  # we are doing some sort of data augmentation here
 		transforms.ToTensor(),
 		transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
 	]

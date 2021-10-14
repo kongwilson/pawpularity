@@ -15,7 +15,7 @@ from tqdm import tqdm
 from sklearn.metrics import mean_squared_error
 
 from loader import get_loader, PawImageDatasetPreloaded, MyCollate
-from model import PawpularityNN, PawBenchmark
+from model import *
 from utils import *
 
 
@@ -169,9 +169,9 @@ def train_benchmark():
         embed_size = 64
         hidden_size = 64
 
-        model = PawBenchmark(256, 256, 3, len(dataset.features), embed_size, hidden_size=hidden_size)
+        model = PawClassifier(256, 256, 3, len(dataset.features), embed_size, hidden_size=hidden_size)
         model.to(device)
-        loss_func = nn.MSELoss()
+        loss_func = nn.BCEWithLogitsLoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-6)
         scheduler = OneCycleLR(
             optimizer,
@@ -198,7 +198,7 @@ def train_benchmark():
             )
             predictions, valid_targets = validate(val_loader, model, loss_func, epoch)
             rmse = round(mean_squared_error(valid_targets, predictions, squared=False), 5)
-            print(f'rmse at {fold + 1}: {rmse}')
+            print(f'rmse at {epoch}: {rmse}')
             if rmse <= best_rmse:
                 best_rmse = rmse
                 best_epoch = epoch
@@ -218,5 +218,5 @@ def train_benchmark():
         torch.cuda.empty_cache()
 
 
-if __name__ == '__main__':
-    train_benchmark()
+# if __name__ == '__main__':
+#     train_benchmark()
