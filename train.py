@@ -170,11 +170,11 @@ def train_benchmark():
         model = PawBenchmark(256, 256, 3, len(dataset.features), embed_size, hidden_size=hidden_size)
         model.to(device)
         loss_func = nn.MSELoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-6)
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-6)
         scheduler = OneCycleLR(
             optimizer,
-            max_lr=1e-4,
-            steps_per_epoch=int((n_folds - 1) * len(dataset) / (n_folds * batch_size)) + 1,
+            max_lr=1e-2,
+            steps_per_epoch=int(len(dataset) / batch_size) + 1,
             epochs=epochs,
         )
 
@@ -195,14 +195,17 @@ def train_benchmark():
                 # collate_fn=MyCollate(),
             )
             predictions, valid_targets = validate(val_loader, model, loss_func, epoch)
-            rmse = round(mean_squared_error(valid_targets, predictions, squared=False), 3)
-            if rmse < best_rmse:
+            rmse = round(mean_squared_error(valid_targets, predictions, squared=False), 6)
+            if rmse <= best_rmse:
                 best_rmse = rmse
                 best_epoch = epoch
                 if best_model_path is not None:
                     os.remove(best_model_path)
-                best_model_path = os.path.join(data_root, f"epoch{epoch}_fold{fold + 1}_{rmse}_rmse.pth.tar")
+                best_model_path = os.path.join(
+                    data_root, f"{type(model).__name__}_epoch{epoch}_fold{fold + 1}_{rmse}_rmse.pth.tar")
                 torch.save(model.state_dict(), best_model_path)
+
+            dataset.set_fold_to_use(fold, validation=False)
 
 
 # if __name__ == '__main__':

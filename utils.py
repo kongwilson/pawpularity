@@ -14,7 +14,7 @@ import pandas as pd
 import torch
 from torchvision.transforms import transforms
 
-data_root = r'C:\Users\wkong\IdeaProjects\kaggle_data\petfinder-pawpularity-score'
+data_root = r'C:\Users\Myadmin\data\petfinder-pawpularity-score'
 train_dir = os.path.join(data_root, 'train')
 test_dir = os.path.join(data_root, 'test')
 
@@ -59,6 +59,9 @@ transform2 = transforms.Compose(
 	[
 		transforms.ToPILImage(),  # WKNOTE: transforms only works with PIL images
 		transforms.Resize((356, 356)),
+		transforms.RandomHorizontalFlip(p=0.5),  # WKNOTE: randomly flip the image with the given prob
+		transforms.RandomVerticalFlip(p=0.5),
+		transforms.RandomRotation(degrees=180),  # WKNOTE: rotate between -180 to +180
 		transforms.RandomCrop((256, 256)),  # we are doing some sort of data augmentation here
 		transforms.ToTensor(),
 		transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
