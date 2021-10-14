@@ -208,5 +208,5 @@ def train_benchmark():
             dataset.set_fold_to_use(fold, validation=False)
 
 
-# if __name__ == '__main__':
-#     train_benchmark()
+if __name__ == '__main__':
+    train_benchmark()
