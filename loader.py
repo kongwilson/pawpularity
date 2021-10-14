@@ -61,7 +61,7 @@ class PawImageDataset(Dataset):
 
 class PawImageDatasetPreloaded(Dataset):
 
-	def __init__(self, root_dir, train=True, transform=None, image_size=356, validation=False, num_folds=5):
+	def __init__(self, root_dir, train=True, transform=None, image_size=384, validation=False, num_folds=5):
 
 		self.root_dir = root_dir
 		self.train = train
@@ -139,7 +139,7 @@ class PawImageDatasetPreloaded(Dataset):
 
 		img = self.images[pick]
 		if self.transform is not None:
-			img = self.transform(img)
+			img = self.transform(image=img)['image']
 
 		dense = torch.tensor(self.df.iloc[pick][self.features].astype(int).values)
 		paw = torch.tensor(self.pawpularity[pick]).float()

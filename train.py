@@ -154,7 +154,7 @@ def train_benchmark():
     n_folds = 5
     batch_size = 16
     epochs = 20
-    dataset = PawImageDatasetPreloaded(root_dir=data_root, train=True, transform=transform2, num_folds=n_folds)
+    dataset = PawImageDatasetPreloaded(root_dir=data_root, train=True, transform=aug_transform, num_folds=n_folds)
     device = get_default_device()
     for fold in range(n_folds):
         dataset.set_fold_to_use(fold, validation=False)
@@ -170,7 +170,7 @@ def train_benchmark():
         embed_size = 64
         hidden_size = 64
 
-        model = PawVisionTransformerTiny16Patch384(256, 256, 3, len(dataset.features), embed_size, hidden_size)
+        model = PawVisionTransformerTiny16Patch384(3, len(dataset.features), embed_size, hidden_size)
         model.to(device)
         loss_func = nn.BCEWithLogitsLoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-6)

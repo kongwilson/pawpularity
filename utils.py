@@ -6,12 +6,14 @@ Copyright (C) Weicong Kong, 9/10/2021
 import os
 from collections import defaultdict
 
+import albumentations
 import numpy as np
 import pandas as pd
 
 # specifying the root of the data location
 # data_root = os.path.join('/kaggle', 'input', 'petfinder-pawpularity-score')
 import torch
+from albumentations.pytorch import ToTensorV2
 from torchvision.transforms import transforms
 
 data_root = r'C:\Users\Myadmin\data\petfinder-pawpularity-score'
@@ -69,6 +71,31 @@ transform2 = transforms.Compose(
 		# transforms.RandomCrop((256, 256)),  # we are doing some sort of data augmentation here
 		transforms.ToTensor(),
 		transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+	]
+)
+
+aug_transform = albumentations.Compose(
+	[
+		albumentations.Resize(384, 384),
+		albumentations.Normalize(
+			mean=[0.485, 0.456, 0.406],
+			std=[0.229, 0.224, 0.225],
+		),
+		albumentations.HorizontalFlip(p=0.5),
+		albumentations.VerticalFlip(p=0.5),
+		albumentations.Rotate(limit=180, p=0.7),
+		albumentations.ShiftScaleRotate(
+			shift_limit=0.1, scale_limit=0.1, rotate_limit=45, p=0.5
+		),
+		albumentations.HueSaturationValue(
+			hue_shift_limit=0.2, sat_shift_limit=0.2,
+			val_shift_limit=0.2, p=0.5
+		),
+		albumentations.RandomBrightnessContrast(
+			brightness_limit=(-0.1, 0.1),
+			contrast_limit=(-0.1, 0.1), p=0.5
+		),
+		ToTensorV2(p=1.0),
 	]
 )
 
