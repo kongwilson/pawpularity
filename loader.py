@@ -183,7 +183,7 @@ class PawPreprocessor(object):
 			kfolds = list(skf.split(df.index, df['Pawpularity'].values))
 			df['kfold'] = None
 			for fold, (train_indices, val_indices) in enumerate(kfolds):
-				df['kfold'] = df.loc[val_indices, 'kfold'] = fold
+				df.loc[val_indices, 'kfold'] = fold
 		else:
 			path = os.path.join(root_dir, 'test.csv')
 			df = pd.read_csv(path)
