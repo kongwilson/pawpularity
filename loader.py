@@ -6,6 +6,7 @@ Copyright (C) Weicong Kong, 9/10/2021
 import os
 
 import cv2
+import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader, Dataset
@@ -166,6 +167,98 @@ class PawImageDatasetPreloaded(Dataset):
 		self.use_fold = None
 		self.validation = False
 		return
+
+
+class PawPreprocessor(object):
+
+	def __init__(self, root_dir: str, train: bool, n_folds=5):
+		self.train = train
+		self.n_folds = n_folds
+
+		if self.train:
+			path = os.path.join(root_dir, 'train.csv')
+			df = pd.read_csv(path)
+			image_dir = os.path.join(root_dir, 'train')
+			skf = StratifiedKFold(n_folds)
+			kfolds = list(skf.split(df.index, df['Pawpularity'].values))
+			df['kfold'] = None
+			for fold, (train_indices, val_indices) in enumerate(kfolds):
+				df['kfold'] = df.loc[val_indices, 'kfold'] = fold
+		else:
+			path = os.path.join(root_dir, 'test.csv')
+			df = pd.read_csv(path)
+			image_dir = os.path.join(root_dir, 'test')
+
+		df['image_path'] = df['Id'].apply(lambda x: return_filpath(x, folder=image_dir))
+		self.df = df
+
+		not_features = ['Id', 'kfold', 'image_path', 'Pawpularity']
+		self.features = [feat for feat in self.df.columns if feat not in not_features]
+
+	def get_data(self, fold=0, for_validation=False):
+		assert 0 <= fold < self.n_folds
+		if 'kfold' not in self.df:
+			data = self.df.copy()
+		else:
+			if for_validation:
+				data = self.df[self.df['kfold'] == fold].copy()
+			else:
+				data = self.df[self.df['kfold'] != fold].copy()
+
+		image_paths = data['image_path'].values
+		dense = data[self.features].values
+		targets = data['Pawpularity'].values / 100
+
+		return image_paths, dense, targets
+
+
+class PawDataset(Dataset):
+
+	def __init__(
+			self, images_filepaths: np.ndarray, dense_features: np.ndarray,
+			targets: np.ndarray, transform: albumentations.Compose = None, image_size=384, preload=True):
+		self.images_filepaths = images_filepaths
+		self.dense_features = dense_features
+		self.targets = targets
+		self.transform = transform
+		self.image_size = image_size
+
+		if preload:
+			pass
+
+		indices = []  # WK: make sure to lodge a sample to the dataset if image exists
+		images = []
+		for idx, img_path in enumerate(tqdm(self.images_filepaths)):
+			if os.path.exists(img_path):
+				indices.append(idx)
+				if preload:
+					img = self._load_image(img_path)
+					images.append(img)
+
+		self.images = np.array(images)
+		self.images_filepaths = self.images_filepaths[indices]
+		self.dense_features = self.dense_features[indices]
+		self.targets = self.targets[indices]
+
+	def _load_image(self, path):
+		img = cv2.imread(path)
+		img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+		img = cv2.resize(img, (self.image_size, self.image_size))
+		return img
+
+	def __len__(self):
+		return len(self.targets)
+
+	def __getitem__(self, idx):
+		image_filepath = self.images_filepaths[idx]
+		image = self._load_image(image_filepath)
+
+		if self.transform is not None:
+			image = self.transform(image=image)['image']
+
+		dense = self.dense_features[idx, :]
+		label = torch.tensor(self.targets[idx]).float()
+		return image, dense, label
 
 
 class MyCollate:

@@ -14,7 +14,7 @@ from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts, CosineAnnealin
 from tqdm import tqdm
 from sklearn.metrics import mean_squared_error
 
-from loader import get_loader, PawImageDatasetPreloaded, MyCollate
+from loader import *
 from model import *
 from utils import *
 
@@ -154,49 +154,75 @@ def train_benchmark():
     n_folds = 5
     batch_size = 16
     epochs = 20
-    dataset = PawImageDatasetPreloaded(root_dir=data_root, train=True, transform=aug_transform, num_folds=n_folds)
+    embed_size = 128
+    hidden_size = 64
+    lr = 1e-5
+    max_lr = 1e-4
+    min_lr = 1e-7
+    weight_decay = 1e-6
+    preprocessor = PawPreprocessor(root_dir=data_root, train=True, n_folds=n_folds)
     device = get_default_device()
     for fold in range(n_folds):
-        dataset.set_fold_to_use(fold, validation=False)
+
+        train_img_paths, train_dense, train_targets = preprocessor.get_data(fold=fold, for_validation=False)
+        valid_img_paths, valid_dense, valid_target = preprocessor.get_data(fold=fold, for_validation=True)
+        train_dataset = PawDataset(
+            images_filepaths=train_img_paths,
+            dense_features=train_dense,
+            targets=train_targets,
+            transform=aug_transform
+        )
+
+        valid_dataset = PawDataset(
+            images_filepaths=valid_img_paths,
+            dense_features=valid_dense,
+            targets=valid_target,
+            transform=aug_transform_val
+        )
+
         train_loader = DataLoader(
-            dataset=dataset,
+            dataset=train_dataset,
             batch_size=batch_size,
             num_workers=0,
-            shuffle=False,
+            shuffle=True,
+            pin_memory=True,
+            # collate_fn=MyCollate(),
+        )
+
+        val_loader = DataLoader(
+            dataset=valid_dataset,
+            batch_size=batch_size,
+            num_workers=0,
+            shuffle=True,
             pin_memory=False,
             # collate_fn=MyCollate(),
         )
 
-        embed_size = 64
-        hidden_size = 64
-
-        model = PawVisionTransformerLarge32Patch384(3, len(dataset.features), embed_size, hidden_size)
+        model = PawVisionTransformerLarge32Patch384(3, len(preprocessor.features), embed_size, hidden_size)
         model.to(device)
         loss_func = nn.BCEWithLogitsLoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-6)
+        optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
         scheduler = OneCycleLR(
             optimizer,
-            max_lr=1e-2,
-            steps_per_epoch=int(len(dataset) / batch_size) + 1,
+            max_lr=max_lr,
+            steps_per_epoch=int(len(train_dataset) / batch_size) + 1,
             epochs=epochs,
         )
+        # scheduler = CosineAnnealingWarmRestarts(
+        #     optimizer,
+        #     T_0=5,
+        #     eta_min=min_lr,
+        #     last_epoch=-1
+        # )
 
         # Training and Validation Loop
         best_rmse = np.inf
         best_epoch = np.inf
         best_model_path = None
         for epoch in range(1, epochs + 1):
+
             train_epoch(train_loader, model, loss_func, optimizer, epoch, scheduler)
 
-            dataset.set_fold_to_use(fold, validation=True)
-            val_loader = DataLoader(
-                dataset=dataset,
-                batch_size=batch_size,
-                num_workers=0,
-                shuffle=True,
-                pin_memory=False,
-                # collate_fn=MyCollate(),
-            )
             predictions, valid_targets = validate(val_loader, model, loss_func, epoch)
             rmse = round(mean_squared_error(valid_targets, predictions, squared=False), 5)
             print(f'rmse at {epoch}: {rmse}')
@@ -209,8 +235,6 @@ def train_benchmark():
                     data_root, f"{type(model).__name__}_epoch{epoch}_fold{fold + 1}_{rmse}_rmse.pth.tar")
                 torch.save(model.state_dict(), best_model_path)
 
-            dataset.set_fold_to_use(fold, validation=False)
-
         print(f'The best RMSE: {best_rmse} for fold {fold + 1} was achieved on epoch: {best_epoch}.')
         print(f'The Best saved model is: {best_model_path}')
         print(''.join(['#'] * 50))
@@ -219,5 +243,5 @@ def train_benchmark():
         torch.cuda.empty_cache()
 
 
-# if __name__ == '__main__':
-#     train_benchmark()
+if __name__ == '__main__':
+    train_benchmark()

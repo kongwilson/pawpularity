@@ -99,6 +99,17 @@ aug_transform = albumentations.Compose(
 	]
 )
 
+aug_transform_val = albumentations.Compose(
+	[
+		albumentations.Resize(384, 384),
+		albumentations.Normalize(
+			mean=[0.485, 0.456, 0.406],
+			std=[0.229, 0.224, 0.225],
+		),
+		ToTensorV2(p=1.0)
+	]
+)
+
 
 def return_filpath(name, folder=train_dir):
 	path = os.path.join(folder, f'{name}.jpg')
