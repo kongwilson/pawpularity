@@ -127,15 +127,20 @@ class PawVisionTransformerTiny16Patch384(nn.Module):
 	def __init__(self, in_chan, dense_feature_size, embed_size, hidden_size, output_size=1, dropout=0.5):
 
 		super().__init__()
-		self.model = timm.models.vit_tiny_patch16_384(pretrained=True, in_chans=in_chan)
+		self.model = self._get_pretrained_model(in_chan)
 		n_features = self.model.head.in_features
 		self.model.head = nn.Linear(n_features, embed_size)
 		self.fc = nn.Sequential(
 			nn.Linear(embed_size + dense_feature_size, hidden_size),
 			nn.ReLU(),
-			nn.Linear(dense_feature_size, output_size)
+			nn.Linear(hidden_size, output_size)
 		)
 		self.dropout = nn.Dropout(dropout)
+
+	@staticmethod
+	def _get_pretrained_model(in_chan):
+		model = timm.models.vit_tiny_patch16_384(pretrained=True, in_chans=in_chan)
+		return model
 
 	def forward(self, image, dense):
 		embeddings = self.model(image)
@@ -143,3 +148,14 @@ class PawVisionTransformerTiny16Patch384(nn.Module):
 		x = torch.cat([x, dense], dim=1)
 		output = self.fc(x)
 		return output
+
+
+class PawVisionTransformerLarge32Patch384(PawVisionTransformerTiny16Patch384):
+
+	def __init__(self, *args, **kwargs):
+
+		super().__init__(*args, **kwargs)
+
+	@staticmethod
+	def _get_pretrained_model(in_chan):
+		return timm.models.vit_large_patch32_384(pretrained=True, in_chans=in_chan)

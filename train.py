@@ -170,7 +170,7 @@ def train_benchmark():
         embed_size = 64
         hidden_size = 64
 
-        model = PawVisionTransformerTiny16Patch384(3, len(dataset.features), embed_size, hidden_size)
+        model = PawVisionTransformerLarge32Patch384(3, len(dataset.features), embed_size, hidden_size)
         model.to(device)
         loss_func = nn.BCEWithLogitsLoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-6)
@@ -219,5 +219,5 @@ def train_benchmark():
         torch.cuda.empty_cache()
 
 
-if __name__ == '__main__':
-    train_benchmark()
+# if __name__ == '__main__':
+#     train_benchmark()
