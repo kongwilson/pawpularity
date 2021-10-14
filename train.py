@@ -141,7 +141,8 @@ def validate(val_loader, model, loss_func, epoch):
             stream.set_description(f"Epoch: {epoch:02}. Valid. {metric_monitor}")
 
             targets = (target.detach().cpu().numpy() * 100).tolist()
-            outputs = (output.detach().cpu().numpy() * 100).tolist()
+            # WKNOTE: because we are using class for reg
+            outputs = (torch.sigmoid(output).detach().cpu().numpy() * 100).tolist()
 
             final_targets.extend(targets)
             final_outputs.extend(outputs)
@@ -169,7 +170,7 @@ def train_benchmark():
         embed_size = 64
         hidden_size = 64
 
-        model = PawClassifier(256, 256, 3, len(dataset.features), embed_size, hidden_size=hidden_size)
+        model = PawVisionTransformerTiny16Patch384(256, 256, 3, len(dataset.features), embed_size, hidden_size)
         model.to(device)
         loss_func = nn.BCEWithLogitsLoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-6)
@@ -218,5 +219,5 @@ def train_benchmark():
         torch.cuda.empty_cache()
 
 
-# if __name__ == '__main__':
-#     train_benchmark()
+if __name__ == '__main__':
+    train_benchmark()

@@ -3,7 +3,7 @@ DESCRIPTION
 
 Copyright (C) Weicong Kong, 9/10/2021
 """
-
+import timm
 import torch
 import torch.nn as nn
 import torchvision.models as models
@@ -118,12 +118,28 @@ class PawBenchmark(nn.Module):
 class PawClassifier(PawBenchmark):
 
 	def __init__(
-			self, in_width, in_height, in_chan, dense_feature_size, embed_size, hidden_size, output_size=1,
-			kernel_size=3, stride=1, dilation=1, dropout=0.5):
-		super(PawBenchmark, self).__init__()
+			self, *args, **kwargs):
+		super(PawClassifier, self).__init__(*args, **kwargs)
+
+
+class PawVisionTransformerTiny16Patch384(nn.Module):
+
+	def __init__(self, in_chan, dense_feature_size, embed_size, hidden_size, output_size=1, dropout=0.5):
+
+		super().__init__()
+		self.model = timm.models.vit_tiny_patch16_384(pretrained=True, in_chans=in_chan)
+		n_features = self.model.head.in_features
+		self.model.head = nn.Linear(n_features, embed_size)
+		self.fc = nn.Sequential(
+			nn.Linear(embed_size + dense_feature_size, hidden_size),
+			nn.ReLU(),
+			nn.Linear(dense_feature_size, output_size)
+		)
+		self.dropout = nn.Dropout(dropout)
 
 	def forward(self, image, dense):
-		x = super(PawBenchmark, self).forward(image, dense)
-		output = nn.Sigmoid()(x)
+		embeddings = self.model(image)
+		x = self.dropout(embeddings)
+		x = torch.cat([x, dense], dim=1)
+		output = self.fc(x)
 		return output
-

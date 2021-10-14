@@ -60,7 +60,7 @@ transform = transforms.Compose(
 transform2 = transforms.Compose(
 	[
 		transforms.ToPILImage(),  # WKNOTE: transforms only works with PIL images
-		transforms.Resize((256, 256)),
+		transforms.Resize((384, 384)),
 		transforms.RandomHorizontalFlip(p=0.5),  # WKNOTE: randomly flip the image with the given prob
 		transforms.RandomVerticalFlip(p=0.5),
 		transforms.RandomAutocontrast(p=0.3),
