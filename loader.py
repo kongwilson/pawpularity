@@ -17,7 +17,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 from sklearn.model_selection import StratifiedKFold
 
-from kaggle.pawpularity.utils import *
+from utils import *
 
 
 # build image loader
