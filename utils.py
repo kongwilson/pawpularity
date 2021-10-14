@@ -4,6 +4,7 @@ DESCRIPTION
 Copyright (C) Weicong Kong, 9/10/2021
 """
 import os
+from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -13,7 +14,9 @@ import pandas as pd
 import torch
 from torchvision.transforms import transforms
 
-data_root = r'C:\Users\Myadmin\data\petfinder-pawpularity-score'
+data_root = r'C:\Users\wkong\IdeaProjects\kaggle_data\petfinder-pawpularity-score'
+train_dir = os.path.join(data_root, 'train')
+test_dir = os.path.join(data_root, 'test')
 
 
 def build_submission(test_data: pd.DataFrame, pred: np.ndarray, output_folder=None, output_suffix=None):
@@ -51,3 +54,58 @@ transform = transforms.Compose(
 		transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
 	]
 )
+
+transform2 = transforms.Compose(
+	[
+		transforms.ToPILImage(),  # WKNOTE: transforms only works with PIL images
+		transforms.Resize((356, 356)),
+		transforms.RandomCrop((256, 256)),  # we are doing some sort of data augmentation here
+		transforms.ToTensor(),
+		transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+	]
+)
+
+
+def return_filpath(name, folder=train_dir):
+	path = os.path.join(folder, f'{name}.jpg')
+	return path
+
+
+def get_data(for_test=False):
+	if for_test:
+		data = pd.read_csv(os.path.join(data_root, 'test.csv'))
+		folder = test_dir
+	else:
+		data = pd.read_csv(os.path.join(data_root, 'train.csv'))
+		folder = train_dir
+
+	data['image_path'] = data['Id'].apply(lambda x: return_filpath(x, folder=folder))
+	return data
+
+
+class MetricMonitor:
+
+	def __init__(self, float_precision=3):
+		self.float_precision = float_precision
+		self.reset()
+
+	def reset(self):
+		self.metrics = defaultdict(lambda: {"val": 0, "count": 0, "avg": 0})
+
+	def update(self, metric_name, val):
+		metric = self.metrics[metric_name]
+
+		metric["val"] += val
+		metric["count"] += 1
+		metric["avg"] = metric["val"] / metric["count"]
+
+	def __str__(self):
+		return " | ".join(
+			[
+				"{metric_name}: {avg:.{float_precision}f}".format(
+					metric_name=metric_name, avg=metric["avg"],
+					float_precision=self.float_precision
+				)
+				for (metric_name, metric) in self.metrics.items()
+			]
+		)

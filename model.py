@@ -14,8 +14,10 @@ class EncoderCNN(nn.Module):
 	def __init__(self, embed_size, train_cnn=False):
 		super(EncoderCNN, self).__init__()
 		self.train_cnn = train_cnn  # false,
-		# we will use a pre-trained model
-		self.inception = models.inception_v3(pretrained=True, aux_logits=False)
+		# we will use a pre-trained model, if `pretained` is True, it will download the pretrained weights if there are
+		#   not in some paths, if you don't want to download the pretained weight but just load from your saved weights,
+		#   this pretrained arg should be set to False
+		self.inception = models.inception_v3(pretrained=False, aux_logits=False)
 		# access the last linear layer, and replace it with another linear layer with output as the `embed_size`
 		self.inception.fc = nn.Linear(self.inception.fc.in_features, embed_size)
 		self.relu = nn.ReLU()
@@ -38,16 +40,78 @@ class EncoderCNN(nn.Module):
 
 class PawpularityNN(nn.Module):
 
-    def __init__(self, embed_size, hidden_size, num_layers):
-        super(PawpularityNN, self).__init__()
+	def __init__(self, embed_size, hidden_size, num_layers):
+		super(PawpularityNN, self).__init__()
 
-        self.embed = EncoderCNN(embed_size)
-        self.linear = nn.Linear(embed_size, hidden_size, num_layers)
-        self.output = nn.Linear(hidden_size, 1)
-        self.dropout = nn.Dropout(0.5)
+		self.embed = EncoderCNN(embed_size)
+		self.linear = nn.Linear(embed_size, hidden_size, num_layers)
+		self.output = nn.Linear(hidden_size, 1)
+		self.dropout = nn.Dropout(0.5)
 
-    def forward(self, images):
-        embeddings = self.embed(images)
-        hiddens = self.linear(embeddings)
-        outputs = self.output(self.dropout(hiddens))
-        return outputs
+	def forward(self, images):
+		embeddings = self.embed(images)
+		hiddens = self.linear(embeddings)
+		outputs = self.output(self.dropout(hiddens))
+		return outputs
+
+
+class PawBenchmark(nn.Module):
+
+	def __init__(
+			self, in_width, in_height, in_chan, dense_feature_size, embed_size, hidden_size, output_size=1,
+			kernel_size=3, stride=1, dilation=1, dropout=0.5):
+		super(PawBenchmark, self).__init__()
+
+		self.conv = nn.Sequential(
+			# group 1
+			nn.Conv2d(
+				in_channels=in_chan, out_channels=embed_size, kernel_size=(kernel_size, kernel_size),
+				stride=(stride, stride), padding='same', dilation=(dilation, dilation)
+			),
+			nn.ReLU(),
+			nn.Dropout2d(dropout),
+			nn.Conv2d(
+				in_channels=embed_size, out_channels=embed_size, kernel_size=(kernel_size, kernel_size),
+				stride=(stride, stride), padding='same', dilation=(dilation, dilation)
+			),
+			nn.ReLU(),
+			nn.Dropout2d(dropout),
+			nn.MaxPool2d(kernel_size=2),
+
+			# group 2
+			nn.Conv2d(
+				in_channels=embed_size, out_channels=embed_size, kernel_size=(kernel_size, kernel_size),
+				stride=(stride, stride), padding='same', dilation=(dilation, dilation)
+			),
+			nn.ReLU(),
+			nn.Dropout2d(dropout),
+			nn.Conv2d(
+				in_channels=embed_size, out_channels=embed_size, kernel_size=(kernel_size, kernel_size),
+				stride=(stride, stride), padding='same', dilation=(dilation, dilation)
+			),
+			nn.ReLU(),
+			nn.Dropout2d(dropout),
+			nn.MaxPool2d(kernel_size=2),
+
+			nn.Flatten(start_dim=1, end_dim=-1)
+		)
+
+		new_width = int(int(in_width / 2) / 2)
+		new_height = int(int(in_height / 2) / 2)
+
+		n_features = new_width * new_height * embed_size
+
+		self.fc = nn.Sequential(
+			nn.Linear(n_features + dense_feature_size, hidden_size),
+			nn.ReLU(),
+			nn.Dropout(dropout),
+			nn.Linear(hidden_size, output_size)
+		)
+
+	def forward(self, image, dense):
+		img_embeddings = self.conv(image)
+		x = torch.cat([img_embeddings, dense], dim=1)
+		output = self.fc(x)
+		return output
+
+
