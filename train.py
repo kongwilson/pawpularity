@@ -3,6 +3,7 @@ DESCRIPTION
 
 Copyright (C) Weicong Kong, 9/10/2021
 """
+import gc
 import torch.optim
 from torch import nn
 from torch.utils.data import DataLoader
@@ -140,7 +141,7 @@ def validate(val_loader, model, loss_func, epoch):
             stream.set_description(f"Epoch: {epoch:02}. Valid. {metric_monitor}")
 
             targets = (target.detach().cpu().numpy() * 100).tolist()
-            outputs = (torch.sigmoid(output).detach().cpu().numpy() * 100).tolist()
+            outputs = (output.detach().cpu().numpy() * 100).tolist()
 
             final_targets.extend(targets)
             final_outputs.extend(outputs)
@@ -148,6 +149,7 @@ def validate(val_loader, model, loss_func, epoch):
 
 
 def train_benchmark():
+    gc.enable()
     n_folds = 5
     batch_size = 16
     epochs = 20
@@ -195,7 +197,8 @@ def train_benchmark():
                 # collate_fn=MyCollate(),
             )
             predictions, valid_targets = validate(val_loader, model, loss_func, epoch)
-            rmse = round(mean_squared_error(valid_targets, predictions, squared=False), 6)
+            rmse = round(mean_squared_error(valid_targets, predictions, squared=False), 5)
+            print(f'rmse at {fold + 1}: {rmse}')
             if rmse <= best_rmse:
                 best_rmse = rmse
                 best_epoch = epoch
@@ -206,6 +209,13 @@ def train_benchmark():
                 torch.save(model.state_dict(), best_model_path)
 
             dataset.set_fold_to_use(fold, validation=False)
+
+        print(f'The best RMSE: {best_rmse} for fold {fold + 1} was achieved on epoch: {best_epoch}.')
+        print(f'The Best saved model is: {best_model_path}')
+        print(''.join(['#'] * 50))
+        del model
+        gc.collect()
+        torch.cuda.empty_cache()
 
 
 if __name__ == '__main__':
