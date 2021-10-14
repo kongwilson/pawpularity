@@ -48,10 +48,10 @@ def load_checkpoint(checkpoint, model, optimizer):  # , steps):
 	optimizer.load_state_dict(checkpoint["optimizer"])
 
 
-transform = transforms.Compose(
+train_transform = transforms.Compose(
 	[
-		transforms.Resize((356, 356)),
-		transforms.RandomCrop((299, 299)),  # we are doing some sort of data augmentation here
+		transforms.Resize((384, 384)),
+		# transforms.RandomCrop((299, 299)),  # we are doing some sort of data augmentation here
 		transforms.ToTensor(),
 		transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
 	]
@@ -59,7 +59,7 @@ transform = transforms.Compose(
 
 # WKNOTE: Data augmentation, some of them may hurt the model. It's suggested no roration should be made:
 #   https://www.kaggle.com/weicongkong/tf-petfinder-vit-cls-tpu-train/edit
-transform2 = transforms.Compose(
+val_transform = transforms.Compose(
 	[
 		transforms.ToPILImage(),  # WKNOTE: transforms only works with PIL images
 		transforms.Resize((384, 384)),
@@ -74,41 +74,47 @@ transform2 = transforms.Compose(
 	]
 )
 
-aug_transform = albumentations.Compose(
-	[
-		albumentations.Resize(384, 384),
-		albumentations.Normalize(
-			mean=[0.485, 0.456, 0.406],
-			std=[0.229, 0.224, 0.225],
-		),
-		albumentations.HorizontalFlip(p=0.5),
-		albumentations.VerticalFlip(p=0.5),
-		albumentations.Rotate(limit=180, p=0.7),
-		albumentations.ShiftScaleRotate(
-			shift_limit=0.1, scale_limit=0.1, rotate_limit=45, p=0.5
-		),
-		albumentations.HueSaturationValue(
-			hue_shift_limit=0.2, sat_shift_limit=0.2,
-			val_shift_limit=0.2, p=0.5
-		),
-		albumentations.RandomBrightnessContrast(
-			brightness_limit=(-0.1, 0.1),
-			contrast_limit=(-0.1, 0.1), p=0.5
-		),
-		ToTensorV2(p=1.0),
-	]
-)
 
-aug_transform_val = albumentations.Compose(
-	[
-		albumentations.Resize(384, 384),
-		albumentations.Normalize(
-			mean=[0.485, 0.456, 0.406],
-			std=[0.229, 0.224, 0.225],
-		),
-		ToTensorV2(p=1.0)
-	]
-)
+def get_albumentation_transform_for_training(img_size):
+	aug_transform = albumentations.Compose(
+		[
+			albumentations.Resize(img_size, img_size),
+			albumentations.Normalize(
+				mean=[0.485, 0.456, 0.406],
+				std=[0.229, 0.224, 0.225],
+			),
+			albumentations.HorizontalFlip(p=0.5),
+			albumentations.VerticalFlip(p=0.5),
+			albumentations.Rotate(limit=180, p=0.7),
+			albumentations.ShiftScaleRotate(
+				shift_limit=0.1, scale_limit=0.1, rotate_limit=45, p=0.5
+			),
+			albumentations.HueSaturationValue(
+				hue_shift_limit=0.2, sat_shift_limit=0.2,
+				val_shift_limit=0.2, p=0.5
+			),
+			albumentations.RandomBrightnessContrast(
+				brightness_limit=(-0.1, 0.1),
+				contrast_limit=(-0.1, 0.1), p=0.5
+			),
+			ToTensorV2(p=1.0),
+		]
+	)
+	return aug_transform
+
+
+def get_albumentation_transform_for_validation(img_size):
+	aug_transform_val = albumentations.Compose(
+		[
+			albumentations.Resize(img_size, img_size),
+			albumentations.Normalize(
+				mean=[0.485, 0.456, 0.406],
+				std=[0.229, 0.224, 0.225],
+			),
+			ToTensorV2(p=1.0)
+		]
+	)
+	return aug_transform_val
 
 
 def return_filpath(name, folder=train_dir):

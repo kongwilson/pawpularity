@@ -25,7 +25,7 @@ def train():
     train_loader, dataset = get_loader(
         root_folder=data_root,
         is_train=is_train,
-        transform=transform,
+        transform=train_transform,
         num_workers=1,
     )
 
@@ -151,6 +151,7 @@ def validate(val_loader, model, loss_func, epoch):
 
 def train_benchmark():
     gc.enable()
+    img_size = 224
     n_folds = 5
     batch_size = 16
     epochs = 20
@@ -170,14 +171,14 @@ def train_benchmark():
             images_filepaths=train_img_paths,
             dense_features=train_dense,
             targets=train_targets,
-            transform=aug_transform
+            transform=get_albumentation_transform_for_training(img_size)
         )
 
         valid_dataset = PawDataset(
             images_filepaths=valid_img_paths,
             dense_features=valid_dense,
             targets=valid_target,
-            transform=aug_transform_val
+            transform=get_albumentation_transform_for_validation(img_size)
         )
 
         train_loader = DataLoader(
@@ -185,7 +186,7 @@ def train_benchmark():
             batch_size=batch_size,
             num_workers=0,
             shuffle=True,
-            pin_memory=True,
+            pin_memory=False,
             # collate_fn=MyCollate(),
         )
 
@@ -193,12 +194,13 @@ def train_benchmark():
             dataset=valid_dataset,
             batch_size=batch_size,
             num_workers=0,
-            shuffle=True,
+            shuffle=False,
             pin_memory=False,
             # collate_fn=MyCollate(),
         )
 
-        model = PawVisionTransformerLarge32Patch384(3, len(preprocessor.features), embed_size, hidden_size)
+        model = PawClassifier(img_size, img_size, 3, len(preprocessor.features), embed_size, hidden_size)
+        # model = PawVisionTransformerLarge32Patch384(3, len(preprocessor.features), embed_size, hidden_size)
         model.to(device)
         loss_func = nn.BCEWithLogitsLoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)

@@ -10,20 +10,38 @@ from loader import *
 from model import PawpularityNN
 from utils import *
 
+import random
+
+
+# Random Seed Initialize
+RANDOM_SEED = 42
+
+
+def seed_everything(seed=RANDOM_SEED):
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = True
+
 
 if __name__ == '__main__':
+
+	seed_everything(RANDOM_SEED)
 
 	train_loader, dataset = get_loader(
 		root_folder=data_root,
 		is_train=True,
-		transform=transform,
+		transform=train_transform,
 		num_workers=1,
 	)
 
 	test_loader, test_dataset = get_loader(
 		root_folder=data_root,
 		is_train=False,
-		transform=transform,
+		transform=train_transform,
 		num_workers=1,
 		batch_size=32
 	)
@@ -51,7 +69,7 @@ if __name__ == '__main__':
 		outputs = model(imgs)
 		preds.append(outputs)
 
-	preds = torch.cat(preds).detach().cpu().numpy()
+	preds = torch.cat(preds).cpu().detach().numpy()
 
 	train_preds = []
 	for imgs, y in tqdm(train_loader):
