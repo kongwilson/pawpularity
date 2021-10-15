@@ -13,7 +13,7 @@ from model import *
 from utilities import *
 
 
-def infer(model_type, img_size=384, batch_size=4):
+def infer(model_type, img_size=384, batch_size=4, embed_size=128, hidden_size=64):
 
 	seed_everything()
 	device = get_default_device()
@@ -31,7 +31,7 @@ def infer(model_type, img_size=384, batch_size=4):
 	preds = None
 	for model_path in all_models_checkpoints:
 
-		model = model_type()
+		model = model_type(3, len(preprocessor.features), embed_size, hidden_size)
 		model.load_state_dict(torch.load(model_path))
 		model = model.to(device)
 		model.eval()
