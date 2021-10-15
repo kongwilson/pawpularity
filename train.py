@@ -5,14 +5,9 @@ Copyright (C) Weicong Kong, 9/10/2021
 """
 import gc
 import torch.optim
-from torch import nn
-from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts, CosineAnnealingLR, OneCycleLR
-from tqdm import tqdm
-from sklearn.metrics import mean_squared_error
 
 from loader import *
 from model import *
@@ -139,6 +134,7 @@ def validate(val_loader, model, loss_func, epoch):
             output = model(images, dense)
             loss = loss_func(output, target)
             metric_monitor.update('Loss', loss.item())
+            metric_monitor.update('RMSE', rmse_from_classifier_output(output, target))
             stream.set_description(f"Epoch: {epoch:02}. Valid. {metric_monitor}")
 
             targets = (target.detach().cpu().numpy() * 100).tolist()
@@ -151,6 +147,7 @@ def validate(val_loader, model, loss_func, epoch):
 
 
 def train_benchmark():
+    seed_everything()
     gc.enable()
     img_size = 384
     n_folds = 5
@@ -201,7 +198,7 @@ def train_benchmark():
         )
 
         # model = PawClassifier(img_size, img_size, 3, len(preprocessor.features), embed_size, hidden_size)
-        model = PawVisionTransformerLarge32Patch384(3, len(preprocessor.features), embed_size, hidden_size)
+        model = PawVisionTransformerTiny16Patch384(3, len(preprocessor.features), embed_size, hidden_size)
         model.to(device)
         loss_func = nn.BCEWithLogitsLoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)

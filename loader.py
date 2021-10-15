@@ -3,18 +3,10 @@ DESCRIPTION
 
 Copyright (C) Weicong Kong, 9/10/2021
 """
-import os
 
 import cv2
-import numpy as np
-import pandas as pd
-import torch
 from torch.utils.data import DataLoader, Dataset
 from PIL import Image  # Load img
-import torchvision.transforms as transforms
-from torch.utils.tensorboard import SummaryWriter
-import torch.optim as optim
-import torch.nn.functional as F
 from tqdm import tqdm
 from sklearn.model_selection import StratifiedKFold
 
