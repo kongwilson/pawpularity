@@ -27,7 +27,7 @@ def infer(model_type, img_size=384, batch_size=4):
 		transform=get_albumentation_transform_for_training(img_size)
 	)
 
-	all_models_checkpoints = glob.glob(model_root + f'{model_type.__name__}_*.pth.tar')
+	all_models_checkpoints = glob.glob(model_root + os.path.sep + f'{model_type.__name__}_*.pth.tar')
 	preds = None
 	for model_path in all_models_checkpoints:
 
