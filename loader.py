@@ -198,12 +198,12 @@ class PawPreprocessor(object):
 	def get_data(self, fold=0, for_validation=False):
 		assert 0 <= fold < self.n_folds
 		if 'kfold' not in self.df:
-			data = self.df.copy()
+			data = self.df
 		else:
 			if for_validation:
-				data = self.df[self.df['kfold'] == fold].copy()
+				data = self.df[self.df['kfold'] == fold]  # WKNOTE: making copy make lead to CUDA out of memory..
 			else:
-				data = self.df[self.df['kfold'] != fold].copy()
+				data = self.df[self.df['kfold'] != fold]
 
 		image_paths = data['image_path'].values
 		dense = data[self.features].values
@@ -216,22 +216,19 @@ class PawDataset(Dataset):
 
 	def __init__(
 			self, images_filepaths: np.ndarray, dense_features: np.ndarray,
-			targets: np.ndarray, transform: albumentations.Compose = None, image_size=384, preload=True):
+			targets: np.ndarray, transform: albumentations.Compose = None, image_size=384, preload=False):
 		self.images_filepaths = images_filepaths
 		self.dense_features = dense_features
 		self.targets = targets
 		self.transform = transform
 		self.image_size = image_size
 
-		if preload:
-			pass
-
 		indices = []  # WK: make sure to lodge a sample to the dataset if image exists
 		images = []
 		for idx, img_path in enumerate(tqdm(self.images_filepaths)):
 			if os.path.exists(img_path):
 				indices.append(idx)
-				if preload:
+				if preload:  # it looks like preloading the image would benefit the training efficiency only marginally
 					img = self._load_image(img_path)
 					images.append(img)
 

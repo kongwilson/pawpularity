@@ -109,6 +109,7 @@ def train_epoch(train_loader, model, loss_func, optimizer, epoch, scheduler=None
             loss = loss_func(output, target)
 
             metric_monitor.update('Loss', loss.item())
+            metric_monitor.update('RMSE', rmse_from_classifier_output(output, target))
             loss.backward()
             optimizer.step()
 
@@ -151,10 +152,10 @@ def validate(val_loader, model, loss_func, epoch):
 
 def train_benchmark():
     gc.enable()
-    img_size = 224
+    img_size = 384
     n_folds = 5
-    batch_size = 16
-    epochs = 20
+    batch_size = 4
+    epochs = 10
     embed_size = 128
     hidden_size = 64
     lr = 1e-5
@@ -199,23 +200,23 @@ def train_benchmark():
             # collate_fn=MyCollate(),
         )
 
-        model = PawClassifier(img_size, img_size, 3, len(preprocessor.features), embed_size, hidden_size)
-        # model = PawVisionTransformerLarge32Patch384(3, len(preprocessor.features), embed_size, hidden_size)
+        # model = PawClassifier(img_size, img_size, 3, len(preprocessor.features), embed_size, hidden_size)
+        model = PawVisionTransformerLarge32Patch384(3, len(preprocessor.features), embed_size, hidden_size)
         model.to(device)
         loss_func = nn.BCEWithLogitsLoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
-        scheduler = OneCycleLR(
-            optimizer,
-            max_lr=max_lr,
-            steps_per_epoch=int(len(train_dataset) / batch_size) + 1,
-            epochs=epochs,
-        )
-        # scheduler = CosineAnnealingWarmRestarts(
+        # scheduler = OneCycleLR(
         #     optimizer,
-        #     T_0=5,
-        #     eta_min=min_lr,
-        #     last_epoch=-1
+        #     max_lr=max_lr,
+        #     steps_per_epoch=int(len(train_dataset) / batch_size) + 1,
+        #     epochs=epochs,
         # )
+        scheduler = CosineAnnealingWarmRestarts(
+            optimizer,
+            T_0=5,
+            eta_min=min_lr,
+            last_epoch=-1
+        )
 
         # Training and Validation Loop
         best_rmse = np.inf
@@ -227,14 +228,13 @@ def train_benchmark():
 
             predictions, valid_targets = validate(val_loader, model, loss_func, epoch)
             rmse = round(mean_squared_error(valid_targets, predictions, squared=False), 5)
-            print(f'rmse at {epoch}: {rmse}')
             if rmse <= best_rmse:
                 best_rmse = rmse
                 best_epoch = epoch
                 if best_model_path is not None:
                     os.remove(best_model_path)
                 best_model_path = os.path.join(
-                    data_root, f"{type(model).__name__}_epoch{epoch}_fold{fold + 1}_{rmse}_rmse.pth.tar")
+                    model_root, f"{type(model).__name__}_epoch{epoch}_fold{fold + 1}_{rmse}_rmse.pth.tar")
                 torch.save(model.state_dict(), best_model_path)
 
         print(f'The best RMSE: {best_rmse} for fold {fold + 1} was achieved on epoch: {best_epoch}.')

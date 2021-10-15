@@ -14,9 +14,11 @@ import pandas as pd
 # data_root = os.path.join('/kaggle', 'input', 'petfinder-pawpularity-score')
 import torch
 from albumentations.pytorch import ToTensorV2
+from sklearn.metrics import mean_squared_error
 from torchvision.transforms import transforms
 
 data_root = r'C:\Users\Myadmin\data\petfinder-pawpularity-score'
+model_root = data_root
 train_dir = os.path.join(data_root, 'train')
 test_dir = os.path.join(data_root, 'test')
 
@@ -160,3 +162,10 @@ class MetricMonitor:
 				for (metric_name, metric) in self.metrics.items()
 			]
 		)
+
+
+def rmse_from_classifier_output(output: torch.Tensor, target: torch.Tensor):
+	y_pred = torch.sigmoid(output).cpu().detach().numpy() * 100  # WK: move the tensor from gpu to cpu, then detach
+	target = target.cpu() * 100
+
+	return mean_squared_error(target, y_pred, squared=False)
