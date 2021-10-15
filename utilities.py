@@ -18,24 +18,24 @@ from torchvision.transforms import transforms
 
 # specifying the root of the data location
 # data_root = os.path.join('/kaggle', 'input', 'petfinder-pawpularity-score')
-data_root = r'C:\Users\Myadmin\data\petfinder-pawpularity-score'
+# data_root = r'C:\Users\Myadmin\data\petfinder-pawpularity-score'
+data_root = r'C:\Users\wkong\IdeaProjects\kaggle_data\petfinder-pawpularity-score'
 model_root = data_root
 train_dir = os.path.join(data_root, 'train')
 test_dir = os.path.join(data_root, 'test')
-
 
 # Random Seed Initialize
 RANDOM_SEED = 42
 
 
 def seed_everything(seed=RANDOM_SEED):
-    os.environ['PYTHONHASHSEED'] = str(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = True
+	os.environ['PYTHONHASHSEED'] = str(seed)
+	np.random.seed(seed)
+	random.seed(seed)
+	torch.manual_seed(seed)
+	torch.cuda.manual_seed(seed)
+	torch.backends.cudnn.deterministic = True
+	torch.backends.cudnn.benchmark = True
 
 
 def build_submission(test_data: pd.DataFrame, pred: np.ndarray, output_folder=None, output_suffix=None):
@@ -184,3 +184,11 @@ def rmse_from_classifier_output(output: torch.Tensor, target: torch.Tensor):
 	target = target.cpu() * 100
 
 	return mean_squared_error(target, y_pred, squared=False)
+
+
+def get_default_device():
+	# pick GPU if available, else CPU
+	if torch.cuda.is_available():
+		return torch.device('cuda')
+	else:
+		return torch.device('cpu')

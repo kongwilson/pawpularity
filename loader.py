@@ -192,7 +192,7 @@ class PawPreprocessor(object):
 
 	def get_data(self, fold=0, for_validation=False):
 		assert 0 <= fold < self.n_folds
-		if 'kfold' not in self.df:
+		if 'kfold' not in self.df:  # for self.train == False, this is the case
 			data = self.df
 		else:
 			if for_validation:

@@ -3,28 +3,11 @@ DESCRIPTION
 
 Copyright (C) Weicong Kong, 10/10/2021
 """
-from sklearn.metrics import mean_squared_error
-from tqdm import tqdm
+from torch import optim
 
 from loader import *
 from model import PawpularityNN
 from utilities import *
-
-import random
-
-
-# Random Seed Initialize
-RANDOM_SEED = 42
-
-
-def seed_everything(seed=RANDOM_SEED):
-    os.environ['PYTHONHASHSEED'] = str(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = True
 
 
 if __name__ == '__main__':

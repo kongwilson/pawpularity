@@ -76,14 +76,6 @@ def train():
             optimizer.step()
 
 
-def get_default_device():
-    # pick GPU if available, else CPU
-    if torch.cuda.is_available():
-        return torch.device('cuda')
-    else:
-        return torch.device('cpu')
-
-
 def train_epoch(train_loader, model, loss_func, optimizer, epoch, scheduler=None):
 
     metric_monitor = MetricMonitor()
