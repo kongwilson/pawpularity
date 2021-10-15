@@ -15,7 +15,7 @@ from collections import Counter
 
 import tensorflow as tf
 
-from utils import data_root
+from utilities import data_root
 
 tf.random.set_seed(101)
 from tensorflow.keras.applications import MobileNetV2

@@ -11,7 +11,7 @@ from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts, CosineAnnealin
 
 from loader import *
 from model import *
-from utils import *
+from utilities import *
 
 
 def train():
@@ -242,5 +242,5 @@ def train_benchmark():
         torch.cuda.empty_cache()
 
 
-if __name__ == '__main__':
-    train_benchmark()
+# if __name__ == '__main__':
+#     train_benchmark()

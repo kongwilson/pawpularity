@@ -10,7 +10,7 @@ import os
 import xgboost as xgb
 from sklearn.metrics import mean_squared_error
 
-from utils import *
+from utilities import *
 
 
 # specifying the root of the data location

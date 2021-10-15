@@ -6,7 +6,7 @@ Copyright (C) Weicong Kong, 9/10/2021
 import timm
 import torch.nn as nn
 import torchvision.models as models
-from utils import *
+from utilities import *
 
 
 class EncoderCNN(nn.Module):

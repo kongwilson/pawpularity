@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from loader import *
 from model import PawpularityNN
-from utils import *
+from utilities import *
 
 import random
 

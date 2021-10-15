@@ -45,7 +45,7 @@ import torch.optim as optim
 # Metrics
 from sklearn.metrics import mean_squared_error
 
-from utils import data_root
+from utilities import data_root
 
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 warnings.filterwarnings('ignore', category=FutureWarning)
