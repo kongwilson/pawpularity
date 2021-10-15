@@ -159,3 +159,25 @@ class PawVisionTransformerLarge32Patch384(PawVisionTransformerTiny16Patch384):
 	@staticmethod
 	def _get_pretrained_model(in_chan):
 		return timm.models.vit_large_patch32_384(pretrained=True, in_chans=in_chan)
+
+
+class PawSwinTransformerLarge4Patch12Win22k384(PawVisionTransformerTiny16Patch384):
+
+	def __init__(self, *args, **kwargs):
+
+		super().__init__(*args, **kwargs)
+
+	@staticmethod
+	def _get_pretrained_model(in_chan):
+		return timm.models.swin_large_patch4_window12_384_in22k(pretrained=True, in_chans=in_chan)
+
+
+class PawSwinTransformerLarge4Patch12Win384(PawVisionTransformerTiny16Patch384):
+
+	def __init__(self, *args, **kwargs):
+
+		super().__init__(*args, **kwargs)
+
+	@staticmethod
+	def _get_pretrained_model(in_chan):
+		return timm.models.swin_large_patch4_window12_384(pretrained=True, in_chans=in_chan)

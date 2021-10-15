@@ -198,7 +198,7 @@ def train_benchmark():
         )
 
         # model = PawClassifier(img_size, img_size, 3, len(preprocessor.features), embed_size, hidden_size)
-        model = PawVisionTransformerTiny16Patch384(3, len(preprocessor.features), embed_size, hidden_size)
+        model = PawSwinTransformerLarge4Patch12Win384(3, len(preprocessor.features), embed_size, hidden_size)
         model.to(device)
         loss_func = nn.BCEWithLogitsLoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
