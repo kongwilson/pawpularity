@@ -183,6 +183,7 @@ class PawPreprocessor(object):
 			path = os.path.join(root_dir, 'test.csv')
 			df = pd.read_csv(path)
 			image_dir = os.path.join(root_dir, 'test')
+			df['Pawpularity'] = 0  # mocking, so that get_data() works for both train and test
 
 		df['image_path'] = df['Id'].apply(lambda x: return_filpath(x, folder=image_dir))
 		self.df = df
