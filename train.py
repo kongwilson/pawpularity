@@ -143,7 +143,7 @@ def train_benchmark():
     gc.enable()
     img_size = 384
     n_folds = 5
-    batch_size = 4
+    batch_size = 2
     epochs = 10
     embed_size = 128
     hidden_size = 64
@@ -161,7 +161,7 @@ def train_benchmark():
             images_filepaths=train_img_paths,
             dense_features=train_dense,
             targets=train_targets,
-            transform=get_albumentation_transform_for_training(img_size)
+            transform=get_albumentation_transform_for_validation(img_size)  # try without augmentation
         )
 
         valid_dataset = PawDataset(
@@ -234,5 +234,5 @@ def train_benchmark():
         torch.cuda.empty_cache()
 
 
-# if __name__ == '__main__':
-#     train_benchmark()
+if __name__ == '__main__':
+    train_benchmark()

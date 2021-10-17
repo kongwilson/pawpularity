@@ -68,12 +68,12 @@ def infer_out_of_fold(model_type, img_size=384, batch_size=4, embed_size=128, hi
 	seed_everything()
 	device = get_default_device()
 	preprocessor = PawPreprocessor(root_dir=data_root, train=True)
-	valid_img_paths, valid_dense, valid_target = preprocessor.get_data(fold=fold, for_validation=True)
+	valid_img_paths, valid_dense, valid_targets = preprocessor.get_data(fold=fold, for_validation=True)
 
 	test_dataset = PawDataset(
 		images_filepaths=valid_img_paths,
 		dense_features=valid_dense,
-		targets=valid_target,
+		targets=valid_targets,
 		transform=get_albumentation_transform_for_validation(img_size)
 	)
 
@@ -111,7 +111,8 @@ def infer_out_of_fold(model_type, img_size=384, batch_size=4, embed_size=128, hi
 
 	preds /= (len(all_models_checkpoints))
 
-	rmse = round(mean_squared_error(valid_target, preds, squared=False), 5)
+	valid_targets *= 100
+	rmse = round(mean_squared_error(valid_targets, preds, squared=False), 5)
 	print(f'Fold {fold} RMSE: {rmse}')
 
 	return preds
