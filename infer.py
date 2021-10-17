@@ -24,7 +24,7 @@ def infer(model_type, img_size=384, batch_size=4, embed_size=128, hidden_size=64
 		images_filepaths=test_img_paths,
 		dense_features=test_dense,
 		targets=test_targets,
-		transform=get_albumentation_transform_for_training(img_size)
+		transform=get_albumentation_transform_for_validation(img_size)
 	)
 
 	all_models_checkpoints = glob.glob(model_root + os.path.sep + f'{model_type.__name__}_*.pth.tar')
@@ -63,6 +63,62 @@ def infer(model_type, img_size=384, batch_size=4, embed_size=128, hidden_size=64
 	return preds
 
 
+def infer_out_of_fold(model_type, img_size=384, batch_size=4, embed_size=128, hidden_size=64):
+	fold = 0
+	seed_everything()
+	device = get_default_device()
+	preprocessor = PawPreprocessor(root_dir=data_root, train=True)
+	valid_img_paths, valid_dense, valid_target = preprocessor.get_data(fold=fold, for_validation=True)
+
+	test_dataset = PawDataset(
+		images_filepaths=valid_img_paths,
+		dense_features=valid_dense,
+		targets=valid_target,
+		transform=get_albumentation_transform_for_validation(img_size)
+	)
+
+	all_models_checkpoints = glob.glob(model_root + os.path.sep + f'{model_type.__name__}_*.pth.tar')
+	preds = None
+	for model_path in all_models_checkpoints:
+
+		model = model_type(3, len(preprocessor.features), embed_size, hidden_size)
+		model.load_state_dict(torch.load(model_path))
+		model = model.to(device)
+		model.eval()
+
+		test_loader = DataLoader(
+			test_dataset, batch_size=batch_size,
+			shuffle=False, num_workers=0,
+			pin_memory=True
+		)
+
+		temp_preds = None
+		with torch.no_grad():
+			for (images, dense, target) in tqdm(test_loader, desc=f'Predicting. '):
+				images = images.to(device, non_blocking=True)
+				dense = dense.to(device, non_blocking=True)
+				predictions = torch.sigmoid(model(images, dense)).cpu().detach().numpy() * 100
+
+				if temp_preds is None:
+					temp_preds = predictions
+				else:
+					temp_preds = np.vstack((temp_preds, predictions))
+
+		if preds is None:
+			preds = temp_preds
+		else:
+			preds += temp_preds
+
+	preds /= (len(all_models_checkpoints))
+
+	rmse = round(mean_squared_error(valid_target, preds, squared=False), 5)
+	print(f'Fold {fold} RMSE: {rmse}')
+
+	return preds
+
+
 if __name__ == '__main__':
-	preds = infer(PawVisionTransformerLarge32Patch384)
-	print(preds)
+	# preds = infer(PawVisionTransformerLarge32Patch384)
+	# print(preds)
+	preds = infer_out_of_fold(PawVisionTransformerLarge32Patch384)
+
