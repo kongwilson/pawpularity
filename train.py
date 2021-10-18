@@ -143,7 +143,7 @@ def train_benchmark():
     gc.enable()
     img_size = 384
     n_folds = 5
-    batch_size = 2
+    batch_size = 1
     epochs = 10
     embed_size = 128
     hidden_size = 64
@@ -161,7 +161,7 @@ def train_benchmark():
             images_filepaths=train_img_paths,
             dense_features=train_dense,
             targets=train_targets,
-            transform=get_albumentation_transform_for_validation(img_size)  # try without augmentation
+            transform=get_albumentation_transform_for_training(img_size)  # without augmentation, serious overfitting
         )
 
         valid_dataset = PawDataset(
@@ -190,7 +190,7 @@ def train_benchmark():
         )
 
         # model = PawClassifier(img_size, img_size, 3, len(preprocessor.features), embed_size, hidden_size)
-        model = PawSwinTransformerLarge4Patch12Win384(3, len(preprocessor.features), embed_size, hidden_size)
+        model = PawSwinTransformerLarge4Patch12Win22k384(3, len(preprocessor.features), embed_size, hidden_size)
         model.to(device)
         loss_func = nn.BCEWithLogitsLoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
