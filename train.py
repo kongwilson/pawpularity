@@ -142,6 +142,34 @@ def validate(val_loader, model, loss_func, epoch):
     return final_outputs, final_targets
 
 
+def extra_intermediate_outputs_and_targets(model, data_loader):
+
+    device = get_default_device()
+    new_x = None
+    y = None
+    preds = None
+
+    model.eval()
+
+    with torch.no_grad():
+        for (images, dense, target) in tqdm(data_loader, desc=f'Training with XGB. '):
+            images = images.to(device, non_blocking=True)
+            dense = dense.to(device, non_blocking=True)
+            batch_preds = torch.sigmoid(model(images, dense)).cpu().detach().numpy() * 100
+            batch_embed = activation['swin_head']
+            batch_x = np.concatenate([batch_embed, dense.cpu().detach().numpy()], axis=1)
+            if preds is None:
+                preds = batch_preds
+                new_x = batch_x
+                y = target.view(-1, 1).cpu().detach().numpy()
+            else:
+                preds = np.vstack((preds, batch_preds))
+                new_x = np.vstack((new_x, batch_x))
+                y = np.vstack((y, target.view(-1, 1).cpu().detach().numpy()))
+
+    return new_x, y * 100, preds * 100
+
+
 def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hidden_size=64):
 
     fold = 0
@@ -172,7 +200,6 @@ def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hi
         num_workers=0,
         shuffle=True,
         pin_memory=False,
-        # collate_fn=MyCollate(),
     )
 
     val_loader = DataLoader(
@@ -193,54 +220,17 @@ def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hi
     model.model.head.register_forward_hook(get_activation('swin_head'))
     model.load_state_dict(torch.load(model_path))
     model = model.to(device)
-    model.eval()
 
-    xgb_train_x = None
-    xgb_train_y = None
-    dl_train_preds = None
-    with torch.no_grad():
-        for (images, dense, target) in tqdm(train_loader, desc=f'Training with XGB. '):
-            images = images.to(device, non_blocking=True)
-            dense = dense.to(device, non_blocking=True)
-            predictions = torch.sigmoid(model(images, dense)).cpu().detach().numpy() * 100
-            embed = activation['swin_head']
-            xgb_x = np.concatenate([embed, dense.cpu().detach().numpy()], axis=1)
-            if dl_train_preds is None:
-                dl_train_preds = predictions
-                xgb_train_x = xgb_x
-                xgb_train_y = target.view(-1, 1).cpu().detach().numpy()
-            else:
-                dl_train_preds = np.vstack((dl_train_preds, predictions))
-                xgb_train_x = np.vstack((xgb_train_x, xgb_x))
-                xgb_train_y = np.vstack((xgb_train_y, target.view(-1, 1).cpu().detach().numpy()))
+    xgb_train_x, xgb_train_y, train_preds = extra_intermediate_outputs_and_targets(model, train_loader)
+    xgb_val_x, xgb_val_y, val_preds = extra_intermediate_outputs_and_targets(model, val_loader)
 
     xgb_model = xgb.XGBRegressor()
     xgb_model.fit(xgb_train_x, xgb_train_y)
     xgb_train_preds = xgb_model.predict(xgb_train_x)
-
-    xgb_val_x = None
-    xgb_val_y = None
-    dl_val_preds = None
-    with torch.no_grad():
-        for (images, dense, target) in tqdm(val_loader, desc=f'Validating with XGB. '):
-            images = images.to(device, non_blocking=True)
-            dense = dense.to(device, non_blocking=True)
-            predictions = torch.sigmoid(model(images, dense)).cpu().detach().numpy() * 100
-            embed = activation['swin_head']
-            xgb_x = np.concatenate([embed, dense.cpu().detach().numpy()], axis=1)
-            if dl_val_preds is None:
-                dl_val_preds = predictions
-                xgb_val_x = xgb_x
-                xgb_val_y = target.view(-1, 1).cpu().detach().numpy()
-            else:
-                dl_val_preds = np.vstack((dl_val_preds, predictions))
-                xgb_val_x = np.vstack((xgb_val_x, xgb_x))
-                xgb_val_y = np.vstack((xgb_val_y, target.view(-1, 1).cpu().detach().numpy()))
-
     xgb_val_preds = xgb_model.predict(xgb_val_x)
 
-    rmse_train = round(mean_squared_error(xgb_train_y*100, xgb_train_preds*100, squared=False), 5)
-    rmse_val = round(mean_squared_error(xgb_val_y*100, xgb_val_preds*100, squared=False), 5)
+    rmse_train = round(mean_squared_error(xgb_train_y, xgb_train_preds, squared=False), 5)
+    rmse_val = round(mean_squared_error(xgb_val_y, xgb_val_preds, squared=False), 5)
 
     model_path = os.path.join(
         model_root, f"{type(model).__name__}_XGB_{rmse_val}_rmse.json")
