@@ -12,6 +12,7 @@ import torch.nn.functional as F
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts, CosineAnnealingLR, OneCycleLR
 
 import xgboost as xgb
+import optuna
 
 from loader import *
 from model import *
@@ -224,13 +225,37 @@ def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hi
     xgb_train_x, xgb_train_y, train_preds = extra_intermediate_outputs_and_targets(model, train_loader)
     xgb_val_x, xgb_val_y, val_preds = extra_intermediate_outputs_and_targets(model, val_loader)
 
-    xgb_model = xgb.XGBRegressor()
-    xgb_model.fit(xgb_train_x, xgb_train_y)
+    def loss_func(trial: optuna.trial.Trial):
+        params = {
+            'n_estimators': trial.suggest_int('n_estimators', 10, 1000),
+            'max_features': trial.suggest_categorical('max_features', ['auto', 'sqrt', 'log2']),
+            'max_depth': trial.suggest_categorical('max_depth', [None] + list(np.arange(1, 11))),
+            'learning_rate': trial.suggest_uniform('learning_rate', 0, 1),
+            'min_child_weight': trial.suggest_uniform('min_child_weight', 0.1, 1.0),
+            'reg_lambda': trial.suggest_uniform('reg_lambda', 0, 10)}
+
+        xgb_model = xgb.XGBRegressor(random_state=RANDOM_SEED, **params)
+        xgb_model.fit(xgb_train_x, xgb_train_y)
+        xgb_val_preds = xgb_model.predict(xgb_val_x)
+
+        rmse_val = round(mean_squared_error(xgb_val_y, xgb_val_preds, squared=False), 5)
+
+        return rmse_val
+
+    study = optuna.create_study()
+    study.optimize(loss_func, n_trials=100)
+    best_params = study.best_params
+    print('the best model params are:')
+    print(best_params)
+
+    xgb_model = xgb.XGBRegressor(random_state=RANDOM_SEED, **best_params)
     xgb_train_preds = xgb_model.predict(xgb_train_x)
     xgb_val_preds = xgb_model.predict(xgb_val_x)
 
     rmse_train = round(mean_squared_error(xgb_train_y, xgb_train_preds, squared=False), 5)
     rmse_val = round(mean_squared_error(xgb_val_y, xgb_val_preds, squared=False), 5)
+
+    print(f'train rmse: {rmse_train}, val rmse: {rmse_val}')
 
     model_path = os.path.join(
         model_root, f"{type(model).__name__}_XGB_{rmse_val}_rmse.json")
