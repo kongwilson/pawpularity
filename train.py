@@ -208,11 +208,11 @@ def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hi
             if dl_train_preds is None:
                 dl_train_preds = predictions
                 xgb_train_x = xgb_x
-                xgb_train_y = target.cpu().detach().numpy()
+                xgb_train_y = target.view(-1, 1).cpu().detach().numpy()
             else:
                 dl_train_preds = np.vstack((dl_train_preds, predictions))
-                xgb_train_x = np.vstack((xgb_train_x, embed))
-                xgb_train_y = np.vstack((xgb_train_y, target.cpu().detach().numpy()))
+                xgb_train_x = np.vstack((xgb_train_x, xgb_x))
+                xgb_train_y = np.vstack((xgb_train_y, target.view(-1, 1).cpu().detach().numpy()))
 
     xgb_model = xgb.XGBRegressor()
     xgb_model.fit(xgb_train_x, xgb_train_y)
@@ -231,16 +231,16 @@ def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hi
             if dl_val_preds is None:
                 dl_val_preds = predictions
                 xgb_val_x = xgb_x
-                xgb_val_y = target.cpu().detach().numpy()
+                xgb_val_y = target.view(-1, 1).cpu().detach().numpy()
             else:
                 dl_val_preds = np.vstack((dl_val_preds, predictions))
-                xgb_val_x = np.vstack((xgb_val_x, embed))
-                xgb_val_y = np.vstack((xgb_val_y, target.cpu().detach().numpy()))
+                xgb_val_x = np.vstack((xgb_val_x, xgb_x))
+                xgb_val_y = np.vstack((xgb_val_y, target.view(-1, 1).cpu().detach().numpy()))
 
     xgb_val_preds = xgb_model.predict(xgb_val_x)
 
-    rmse_train = round(mean_squared_error(xgb_train_y, xgb_train_preds, squared=False), 5)
-    rmse_val = round(mean_squared_error(xgb_val_y, xgb_val_preds, squared=False), 5)
+    rmse_train = round(mean_squared_error(xgb_train_y*100, xgb_train_preds*100, squared=False), 5)
+    rmse_val = round(mean_squared_error(xgb_val_y*100, xgb_val_preds*100, squared=False), 5)
 
     model_path = os.path.join(
         model_root, f"{type(model).__name__}_XGB_{rmse_val}_rmse.json")
