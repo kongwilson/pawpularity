@@ -18,8 +18,8 @@ from torchvision.transforms import transforms
 
 # specifying the root of the data location
 # data_root = os.path.join('/kaggle', 'input', 'petfinder-pawpularity-score')
-# data_root = r'C:\Users\Myadmin\data\petfinder-pawpularity-score'
-data_root = r'C:\Users\wkong\IdeaProjects\kaggle_data\petfinder-pawpularity-score'
+data_root = r'C:\Users\Myadmin\data\petfinder-pawpularity-score'
+# data_root = r'C:\Users\wkong\IdeaProjects\kaggle_data\petfinder-pawpularity-score'
 model_root = data_root
 train_dir = os.path.join(data_root, 'train')
 test_dir = os.path.join(data_root, 'test')

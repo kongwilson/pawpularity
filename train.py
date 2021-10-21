@@ -166,6 +166,24 @@ def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hi
         transform=get_albumentation_transform_for_validation(img_size)
     )
 
+    train_loader = DataLoader(
+        dataset=train_dataset,
+        batch_size=batch_size,
+        num_workers=0,
+        shuffle=True,
+        pin_memory=False,
+        # collate_fn=MyCollate(),
+    )
+
+    val_loader = DataLoader(
+        dataset=valid_dataset,
+        batch_size=batch_size,
+        num_workers=0,
+        shuffle=False,
+        pin_memory=False,
+        # collate_fn=MyCollate(),
+    )
+
     all_models_checkpoints = glob.glob(model_root + os.path.sep + f'{model_type.__name__}_*.pth.tar')
     model_path = all_models_checkpoints[0]
     preds = None
@@ -181,7 +199,7 @@ def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hi
     xgb_train_y = None
     dl_train_preds = None
     with torch.no_grad():
-        for (images, dense, target) in tqdm(train_dataset, desc=f'Training with XGB. '):
+        for (images, dense, target) in tqdm(train_loader, desc=f'Training with XGB. '):
             images = images.to(device, non_blocking=True)
             dense = dense.to(device, non_blocking=True)
             predictions = torch.sigmoid(model(images, dense)).cpu().detach().numpy() * 100
@@ -204,7 +222,7 @@ def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hi
     xgb_val_y = None
     dl_val_preds = None
     with torch.no_grad():
-        for (images, dense, target) in tqdm(valid_dataset, desc=f'Validating with XGB. '):
+        for (images, dense, target) in tqdm(val_loader, desc=f'Validating with XGB. '):
             images = images.to(device, non_blocking=True)
             dense = dense.to(device, non_blocking=True)
             predictions = torch.sigmoid(model(images, dense)).cpu().detach().numpy() * 100
