@@ -173,95 +173,124 @@ def extra_intermediate_outputs_and_targets(model, data_loader):
 
 def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hidden_size=64):
 
-    fold = 0
     seed_everything()
     device = get_default_device()
     preprocessor = PawPreprocessor(root_dir=data_root, train=True)
+    test_preprocessor = PawPreprocessor(root_dir=data_root, train=False)
 
-    train_img_paths, train_dense, train_targets = preprocessor.get_data(fold=fold, for_validation=False)
-    valid_img_paths, valid_dense, valid_targets = preprocessor.get_data(fold=fold, for_validation=True)
-
-    train_dataset = PawDataset(
-        images_filepaths=train_img_paths,
-        dense_features=train_dense,
-        targets=train_targets,
-        transform=get_albumentation_transform_for_training(img_size)  # without augmentation, serious overfitting
-    )
-
-    valid_dataset = PawDataset(
-        images_filepaths=valid_img_paths,
-        dense_features=valid_dense,
-        targets=valid_targets,
-        transform=get_albumentation_transform_for_validation(img_size)
-    )
-
-    train_loader = DataLoader(
-        dataset=train_dataset,
-        batch_size=batch_size,
-        num_workers=0,
-        shuffle=True,
-        pin_memory=False,
-    )
-
-    val_loader = DataLoader(
-        dataset=valid_dataset,
-        batch_size=batch_size,
-        num_workers=0,
-        shuffle=False,
-        pin_memory=False,
-        # collate_fn=MyCollate(),
-    )
-
-    all_models_checkpoints = glob.glob(model_root + os.path.sep + f'{model_type.__name__}_*.pth.tar')
-    model_path = all_models_checkpoints[0]
     preds = None
+    all_models_checkpoints = glob.glob(model_root + os.path.sep + f'{model_type.__name__}_*.pth.tar')
 
-    model = PawSwinTransformerLarge4Patch12Win384(3, len(preprocessor.features), embed_size, hidden_size)
-    # WKNOTE: get activation from an intermediate layer
-    model.model.head.register_forward_hook(get_activation('swin_head'))
-    model.load_state_dict(torch.load(model_path))
-    model = model.to(device)
+    for fold, model_path in enumerate(all_models_checkpoints):
+        train_img_paths, train_dense, train_targets = preprocessor.get_data(fold=fold, for_validation=False)
+        valid_img_paths, valid_dense, valid_targets = preprocessor.get_data(fold=fold, for_validation=True)
 
-    xgb_train_x, xgb_train_y, train_preds = extra_intermediate_outputs_and_targets(model, train_loader)
-    xgb_val_x, xgb_val_y, val_preds = extra_intermediate_outputs_and_targets(model, val_loader)
+        train_dataset = PawDataset(
+            images_filepaths=train_img_paths,
+            dense_features=train_dense,
+            targets=train_targets,
+            transform=get_albumentation_transform_for_training(img_size)  # without augmentation, serious overfitting
+        )
 
-    def loss_func(trial: optuna.trial.Trial):
-        params = {
-            'n_estimators': trial.suggest_int('n_estimators', 10, 1000),
-            'max_features': trial.suggest_categorical('max_features', ['auto', 'sqrt', 'log2']),
-            'max_depth': trial.suggest_categorical('max_depth', [None] + list(np.arange(1, 11))),
-            'learning_rate': trial.suggest_uniform('learning_rate', 0, 1),
-            'min_child_weight': trial.suggest_uniform('min_child_weight', 0.1, 1.0),
-            'reg_lambda': trial.suggest_uniform('reg_lambda', 0, 10)}
+        valid_dataset = PawDataset(
+            images_filepaths=valid_img_paths,
+            dense_features=valid_dense,
+            targets=valid_targets,
+            transform=get_albumentation_transform_for_validation(img_size)
+        )
 
-        xgb_model = xgb.XGBRegressor(random_state=RANDOM_SEED, **params)
+        train_loader = DataLoader(
+            dataset=train_dataset,
+            batch_size=batch_size,
+            num_workers=0,
+            shuffle=True,
+            pin_memory=False,
+        )
+
+        val_loader = DataLoader(
+            dataset=valid_dataset,
+            batch_size=batch_size,
+            num_workers=0,
+            shuffle=False,
+            pin_memory=False,
+            # collate_fn=MyCollate(),
+        )
+
+        model = PawSwinTransformerLarge4Patch12Win384(3, len(preprocessor.features), embed_size, hidden_size)
+        # WKNOTE: get activation from an intermediate layer
+        model.model.head.register_forward_hook(get_activation('swin_head'))
+        model.load_state_dict(torch.load(model_path))
+        model = model.to(device)
+
+        xgb_train_x, xgb_train_y, train_preds = extra_intermediate_outputs_and_targets(model, train_loader)
+        xgb_val_x, xgb_val_y, val_preds = extra_intermediate_outputs_and_targets(model, val_loader)
+
+        def loss_func(trial: optuna.trial.Trial):
+            params = {
+                'n_estimators': trial.suggest_int('n_estimators', 10, 1000),  # default = 100
+                'booster': trial.suggest_categorical('booster', ['gbtree', 'gblinear', 'dart']),  # default = 'gbtree'
+                'gamma': trial.suggest_uniform('gamma', 0, 100),  # default = 0
+                'max_depth': trial.suggest_int('max_depth', 1, 11),  # default = 6, the deeper, the easier to overfit
+                'learning_rate': trial.suggest_uniform('learning_rate', 0, 1),  # default = 0.3
+                'min_child_weight': trial.suggest_uniform('min_child_weight', 0.1, 100),  # default = 1
+                'max_delta_step': trial.suggest_int('max_delta_step', 0, 11),  # default = 0
+                'reg_lambda': trial.suggest_uniform('reg_lambda', 0, 1),
+                'reg_alpha': trial.suggest_uniform('reg_alpha', 0, 1),
+                'subsample': trial.suggest_uniform('subsample', 0, 1)  # default = 1
+            }
+
+            xgb_model = xgb.XGBRegressor(random_state=RANDOM_SEED, **params)
+            xgb_model.fit(xgb_train_x, xgb_train_y)
+            xgb_val_preds = xgb_model.predict(xgb_val_x)
+
+            rmse_val = round(mean_squared_error(xgb_val_y, xgb_val_preds, squared=False), 5)
+
+            return rmse_val
+
+        study = optuna.create_study()
+        study.optimize(loss_func, n_trials=100)
+        best_params = study.best_params
+        print('the best model params are:')
+        print(best_params)
+
+        xgb_model = xgb.XGBRegressor(random_state=RANDOM_SEED, **best_params)
         xgb_model.fit(xgb_train_x, xgb_train_y)
+        xgb_train_preds = xgb_model.predict(xgb_train_x)
         xgb_val_preds = xgb_model.predict(xgb_val_x)
 
+        rmse_train = round(mean_squared_error(xgb_train_y, xgb_train_preds, squared=False), 5)
         rmse_val = round(mean_squared_error(xgb_val_y, xgb_val_preds, squared=False), 5)
 
-        return rmse_val
+        print(f'train rmse: {rmse_train}, val rmse: {rmse_val}')
 
-    study = optuna.create_study()
-    study.optimize(loss_func, n_trials=100)
-    best_params = study.best_params
-    print('the best model params are:')
-    print(best_params)
+        model_path = os.path.join(
+            model_root, f"{type(model).__name__}_XGB_{rmse_val}_rmse.json")
+        xgb_model.save_model(model_path)
 
-    xgb_model = xgb.XGBRegressor(random_state=RANDOM_SEED, **best_params)
-    xgb_train_preds = xgb_model.predict(xgb_train_x)
-    xgb_val_preds = xgb_model.predict(xgb_val_x)
+        test_img_paths, test_dense, test_targets = test_preprocessor.get_data()
+        test_dataset = PawDataset(
+            images_filepaths=test_img_paths,
+            dense_features=test_dense,
+            targets=test_targets,
+            transform=get_albumentation_transform_for_validation(img_size)
+        )
+        test_loader = DataLoader(
+            dataset=test_dataset,
+            batch_size=batch_size,
+            num_workers=0,
+            shuffle=False,
+            pin_memory=False,
+        )
+        xgb_test_x, xgb_test_y, test_preds = extra_intermediate_outputs_and_targets(model, test_loader)
+        xgb_test_preds = xgb_model.predict(xgb_test_x)
+        if preds is None:
+            preds = xgb_test_preds
+        else:
+            preds += xgb_test_preds
 
-    rmse_train = round(mean_squared_error(xgb_train_y, xgb_train_preds, squared=False), 5)
-    rmse_val = round(mean_squared_error(xgb_val_y, xgb_val_preds, squared=False), 5)
+    preds /= (len(all_models_checkpoints))
 
-    print(f'train rmse: {rmse_train}, val rmse: {rmse_val}')
-
-    model_path = os.path.join(
-        model_root, f"{type(model).__name__}_XGB_{rmse_val}_rmse.json")
-    xgb_model.save_model(model_path)
-
-    return
+    return preds
 
 
 activation = {}
