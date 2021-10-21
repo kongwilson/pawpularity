@@ -4,10 +4,14 @@ DESCRIPTION
 Copyright (C) Weicong Kong, 9/10/2021
 """
 import gc
+import glob
+
 import torch.optim
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts, CosineAnnealingLR, OneCycleLR
+
+import xgboost as xgb
 
 from loader import *
 from model import *
@@ -136,6 +140,102 @@ def validate(val_loader, model, loss_func, epoch):
             final_targets.extend(targets)
             final_outputs.extend(outputs)
     return final_outputs, final_targets
+
+
+def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hidden_size=64):
+
+    fold = 0
+    seed_everything()
+    device = get_default_device()
+    preprocessor = PawPreprocessor(root_dir=data_root, train=True)
+
+    train_img_paths, train_dense, train_targets = preprocessor.get_data(fold=fold, for_validation=False)
+    valid_img_paths, valid_dense, valid_targets = preprocessor.get_data(fold=fold, for_validation=True)
+
+    train_dataset = PawDataset(
+        images_filepaths=train_img_paths,
+        dense_features=train_dense,
+        targets=train_targets,
+        transform=get_albumentation_transform_for_training(img_size)  # without augmentation, serious overfitting
+    )
+
+    valid_dataset = PawDataset(
+        images_filepaths=valid_img_paths,
+        dense_features=valid_dense,
+        targets=valid_targets,
+        transform=get_albumentation_transform_for_validation(img_size)
+    )
+
+    all_models_checkpoints = glob.glob(model_root + os.path.sep + f'{model_type.__name__}_*.pth.tar')
+    model_path = all_models_checkpoints[0]
+    preds = None
+
+    model = PawSwinTransformerLarge4Patch12Win384(3, len(preprocessor.features), embed_size, hidden_size)
+    # WKNOTE: get activation from an intermediate layer
+    model.model.head.register_forward_hook(get_activation('swin_head'))
+    model.load_state_dict(torch.load(model_path))
+    model = model.to(device)
+    model.eval()
+
+    xgb_train_x = None
+    xgb_train_y = None
+    dl_train_preds = None
+    with torch.no_grad():
+        for (images, dense, target) in tqdm(train_dataset, desc=f'Training with XGB. '):
+            images = images.to(device, non_blocking=True)
+            dense = dense.to(device, non_blocking=True)
+            predictions = torch.sigmoid(model(images, dense)).cpu().detach().numpy() * 100
+            embed = activation['swin_head']
+            xgb_x = np.concatenate([embed, dense.cpu().detach().numpy()], axis=1)
+            if dl_train_preds is None:
+                dl_train_preds = predictions
+                xgb_train_x = xgb_x
+                xgb_train_y = target.cpu().detach().numpy()
+            else:
+                dl_train_preds = np.vstack((dl_train_preds, predictions))
+                xgb_train_x = np.vstack((xgb_train_x, embed))
+                xgb_train_y = np.vstack((xgb_train_y, target.cpu().detach().numpy()))
+
+    xgb_model = xgb.XGBRegressor()
+    xgb_model.fit(xgb_train_x, xgb_train_y)
+    xgb_train_preds = xgb_model.predict(xgb_train_x)
+
+    xgb_val_x = None
+    xgb_val_y = None
+    dl_val_preds = None
+    with torch.no_grad():
+        for (images, dense, target) in tqdm(valid_dataset, desc=f'Validating with XGB. '):
+            images = images.to(device, non_blocking=True)
+            dense = dense.to(device, non_blocking=True)
+            predictions = torch.sigmoid(model(images, dense)).cpu().detach().numpy() * 100
+            embed = activation['swin_head']
+            xgb_x = np.concatenate([embed, dense.cpu().detach().numpy()], axis=1)
+            if dl_val_preds is None:
+                dl_val_preds = predictions
+                xgb_val_x = xgb_x
+                xgb_val_y = target.cpu().detach().numpy()
+            else:
+                dl_val_preds = np.vstack((dl_val_preds, predictions))
+                xgb_val_x = np.vstack((xgb_val_x, embed))
+                xgb_val_y = np.vstack((xgb_val_y, target.cpu().detach().numpy()))
+
+    xgb_val_preds = xgb_model.predict(xgb_val_x)
+
+    rmse_train = round(mean_squared_error(xgb_train_y, xgb_train_preds, squared=False), 5)
+    rmse_val = round(mean_squared_error(xgb_val_y, xgb_val_preds, squared=False), 5)
+
+    model_path = os.path.join(
+        model_root, f"{type(model).__name__}_XGB_{rmse_val}_rmse.json")
+    xgb_model.save_model(model_path)
+
+    return
+
+
+activation = {}
+def get_activation(name):
+    def hook(model, input, output):
+        activation[name] = output.cpu().detach().numpy()
+    return hook
 
 
 def train_benchmark():

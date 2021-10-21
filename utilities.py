@@ -18,8 +18,8 @@ from torchvision.transforms import transforms
 
 # specifying the root of the data location
 # data_root = os.path.join('/kaggle', 'input', 'petfinder-pawpularity-score')
-data_root = r'C:\Users\Myadmin\data\petfinder-pawpularity-score'
-# data_root = r'C:\Users\wkong\IdeaProjects\kaggle_data\petfinder-pawpularity-score'
+# data_root = r'C:\Users\Myadmin\data\petfinder-pawpularity-score'
+data_root = r'C:\Users\wkong\IdeaProjects\kaggle_data\petfinder-pawpularity-score'
 model_root = data_root
 train_dir = os.path.join(data_root, 'train')
 test_dir = os.path.join(data_root, 'test')
@@ -170,10 +170,7 @@ class MetricMonitor:
 	def __str__(self):
 		return " | ".join(
 			[
-				"{metric_name}: {avg:.{float_precision}f}".format(
-					metric_name=metric_name, avg=metric["avg"],
-					float_precision=self.float_precision
-				)
+				f"{metric_name}: {metric['avg']:.{self.float_precision}f}"
 				for (metric_name, metric) in self.metrics.items()
 			]
 		)
