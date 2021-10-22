@@ -25,7 +25,7 @@ def infer(model_type, img_size=384, batch_size=4, embed_size=128, hidden_size=64
 	preds = None
 	for model_path in all_models_checkpoints:
 
-		model = model_type(3, len(preprocessor.features), embed_size, hidden_size)
+		model = model_type(3, len(preprocessor.features), embed_size, hidden_size, pretrained=False)
 		model.load_state_dict(torch.load(model_path))
 		model = model.to(device)
 		model.eval()
@@ -79,7 +79,7 @@ def infer_with_xgb(model_type, img_size=384, batch_size=4, embed_size=128, hidde
 		xgb_file = [p for p in os.listdir(model_root) if model_name in p and '.json' in p][0]
 		xgb_path = os.path.join(model_root, xgb_file)
 
-		model = model_type(3, len(preprocessor.features), embed_size, hidden_size)
+		model = model_type(3, len(preprocessor.features), embed_size, hidden_size, pretrained=False)
 		model.load_state_dict(torch.load(model_path))
 		model.model.head.register_forward_hook(get_activation('swin_head'))
 		model = model.to(device)
@@ -125,7 +125,7 @@ def infer_out_of_fold(model_type, img_size=384, batch_size=4, embed_size=128, hi
 	preds = None
 	for model_path in all_models_checkpoints:
 
-		model = model_type(3, len(preprocessor.features), embed_size, hidden_size)
+		model = model_type(3, len(preprocessor.features), embed_size, hidden_size, pretrained=False)
 		model.load_state_dict(torch.load(model_path))
 		model = model.to(device)
 		model.eval()
