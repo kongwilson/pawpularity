@@ -412,3 +412,7 @@ def train_benchmark():
 
 if __name__ == '__main__':
 	train_benchmark()
+	preds1 = xgb_to_the_result(PawSwinTransformerLarge4Patch12Win384)
+	preds2 = xgb_to_the_result(PawSwinTransformerLarge4Patch12Win22k384)
+	print(preds1)
+	print(preds2)
