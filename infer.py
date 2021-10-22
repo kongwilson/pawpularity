@@ -75,8 +75,8 @@ def infer_with_xgb(model_type, img_size=384, batch_size=4, embed_size=128, hidde
 	preds = None
 	for model_path in all_models_checkpoints:
 
-		model_name = os.path.basename(model_path).split(os.path.extsep)[:-1]
-		xgb_path = [p for p in all_models_checkpoints if model_name in p and '.json' in p][0]
+		model_name = os.path.basename(model_path)
+		xgb_path = [p for p in os.listdir(model_root) if model_name in p and '.json' in p][0]
 
 		model = model_type(3, len(preprocessor.features), embed_size, hidden_size)
 		model.load_state_dict(torch.load(model_path))
@@ -163,5 +163,9 @@ def infer_out_of_fold(model_type, img_size=384, batch_size=4, embed_size=128, hi
 if __name__ == '__main__':
 	# preds = infer(PawVisionTransformerLarge32Patch384)
 	# print(preds)
-	preds = infer_out_of_fold(PawVisionTransformerLarge32Patch384)
+	# preds = infer_out_of_fold(PawVisionTransformerLarge32Patch384)
+	preds1 = infer_with_xgb(PawSwinTransformerLarge4Patch12Win384)
+	preds2 = infer_with_xgb(PawSwinTransformerLarge4Patch12Win22k384)
 
+	preds = (preds1 + preds2) / 2
+	print(preds)
