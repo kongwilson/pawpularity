@@ -246,7 +246,7 @@ def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hi
 		study = optuna.create_study()
 		study.optimize(loss_func, n_trials=100)
 		best_params = study.best_params
-		print('the best model params are:')
+		print(f'the best model params are found on Trial #{study.best_trial.number}')
 		print(best_params)
 
 		xgb_model = xgb.XGBRegressor(random_state=RANDOM_SEED, **best_params)
@@ -399,7 +399,7 @@ def train_benchmark():
 				if best_model_path is not None:
 					os.remove(best_model_path)
 				best_model_path = os.path.join(
-					model_root, f"{type(model).__name__}_epoch{epoch}_fold{fold + 1}_{rmse}_rmse.pth.tar")
+					model_root, f"{type(model).__name__}_fold{fold + 1}_epoch{epoch}_{rmse}_rmse.pth.tar")
 				torch.save(model.state_dict(), best_model_path)
 
 		print(f'The best RMSE: {best_rmse} for fold {fold + 1} was achieved on epoch: {best_epoch}.')
