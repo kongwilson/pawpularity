@@ -164,7 +164,7 @@ def extra_intermediate_outputs_and_targets(model, data_loader):
 				new_x = np.vstack((new_x, batch_x))
 				y = np.vstack((y, target.view(-1, 1).cpu().detach().numpy()))
 
-	return new_x, y * 100, preds * 100
+	return new_x, y * 100, preds
 
 
 def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hidden_size=64):
@@ -176,7 +176,9 @@ def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hi
 	preds = None
 	all_models_checkpoints = glob.glob(model_root + os.path.sep + f'{model_type.__name__}_*.pth.tar')
 
-	for fold, model_path in enumerate(all_models_checkpoints):
+	for model_path in all_models_checkpoints:
+		fold_info = [f for f in model_path.split('_') if f.startswith('fold')][0]
+		fold = int(fold_info[-1]) - 1
 		train_img_paths, train_dense, train_targets = preprocessor.get_data(fold=fold, for_validation=False)
 		valid_img_paths, valid_dense, valid_targets = preprocessor.get_data(fold=fold, for_validation=True)
 
@@ -296,7 +298,7 @@ def prediction_validity_check(preds):
 	nan_mask = np.isnan(preds)
 	inf_mask = np.isinf(preds)
 	low_mask = preds < 0
-	high_mask = preds > 0
+	high_mask = preds > 100
 	preds[nan_mask] = 0
 	preds[inf_mask] = 100
 	preds[low_mask] = 0

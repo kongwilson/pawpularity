@@ -166,12 +166,13 @@ class PawImageDatasetPreloaded(Dataset):
 
 class PawPreprocessor(object):
 
-	def __init__(self, root_dir: str, train: bool, n_folds=5):
+	def __init__(self, root_dir: str, train: bool, n_folds=5, model_dir=None):
 		self.train = train
 		self.n_folds = n_folds
 
 		if self.train:
 			path = os.path.join(root_dir, 'train.csv')
+
 			df = pd.read_csv(path)
 			image_dir = os.path.join(root_dir, 'train')
 			skf = StratifiedKFold(n_folds)
@@ -179,6 +180,13 @@ class PawPreprocessor(object):
 			df['kfold'] = None
 			for fold, (train_indices, val_indices) in enumerate(kfolds):
 				df.loc[val_indices, 'kfold'] = fold
+
+			if model_dir is not None:
+				stage_path = os.path.join(model_dir, f'train_{self.n_folds}_folds.csv')
+				if not os.path.exists(stage_path):  # so that the cross-validation will stay the same
+					df.to_csv(stage_path, index=False)
+				else:
+					df = pd.read_csv(stage_path)
 		else:
 			path = os.path.join(root_dir, 'test.csv')
 			df = pd.read_csv(path)
