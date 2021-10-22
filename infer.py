@@ -80,8 +80,8 @@ def infer_with_xgb(model_type, img_size=384, batch_size=4, embed_size=128, hidde
 
 		model = model_type(3, len(preprocessor.features), embed_size, hidden_size)
 		model.load_state_dict(torch.load(model_path))
+		model.model.head.register_forward_hook(get_activation('swin_head'))
 		model = model.to(device)
-		model.eval()
 
 		test_loader = DataLoader(
 			test_dataset, batch_size=batch_size,

@@ -213,7 +213,7 @@ def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hi
 			# collate_fn=MyCollate(),
 		)
 
-		model = PawSwinTransformerLarge4Patch12Win384(3, len(preprocessor.features), embed_size, hidden_size)
+		model = model_type(3, len(preprocessor.features), embed_size, hidden_size)
 		# WKNOTE: get activation from an intermediate layer
 		model.model.head.register_forward_hook(get_activation('swin_head'))
 		model.load_state_dict(torch.load(model_path))
