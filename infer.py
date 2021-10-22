@@ -67,7 +67,7 @@ def infer_out_of_fold(model_type, img_size=384, batch_size=4, embed_size=128, hi
 	fold = 0
 	seed_everything()
 	device = get_default_device()
-	preprocessor = PawPreprocessor(root_dir=data_root, train=True)
+	preprocessor = PawPreprocessor(root_dir=data_root, train=True, model_dir=model_root)
 	valid_img_paths, valid_dense, valid_targets = preprocessor.get_data(fold=fold, for_validation=True)
 
 	test_dataset = PawDataset(

@@ -170,7 +170,7 @@ def extra_intermediate_outputs_and_targets(model, data_loader):
 def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hidden_size=64):
 	seed_everything()
 	device = get_default_device()
-	preprocessor = PawPreprocessor(root_dir=data_root, train=True)
+	preprocessor = PawPreprocessor(root_dir=data_root, train=True, model_dir=model_root)
 	test_preprocessor = PawPreprocessor(root_dir=data_root, train=False)
 
 	preds = None
@@ -329,7 +329,7 @@ def train_benchmark():
 	max_lr = 1e-4
 	min_lr = 1e-7
 	weight_decay = 1e-6
-	preprocessor = PawPreprocessor(root_dir=data_root, train=True, n_folds=n_folds)
+	preprocessor = PawPreprocessor(root_dir=data_root, train=True, n_folds=n_folds, model_dir=model_root)
 	device = get_default_device()
 	for fold in range(n_folds):
 
