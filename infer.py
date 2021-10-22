@@ -76,7 +76,8 @@ def infer_with_xgb(model_type, img_size=384, batch_size=4, embed_size=128, hidde
 	for model_path in all_models_checkpoints:
 
 		model_name = os.path.basename(model_path)
-		xgb_path = [p for p in os.listdir(model_root) if model_name in p and '.json' in p][0]
+		xgb_file = [p for p in os.listdir(model_root) if model_name in p and '.json' in p][0]
+		xgb_path = os.path.join(model_root, xgb_file)
 
 		model = model_type(3, len(preprocessor.features), embed_size, hidden_size)
 		model.load_state_dict(torch.load(model_path))
