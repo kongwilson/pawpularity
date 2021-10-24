@@ -5,6 +5,7 @@ Copyright (C) Weicong Kong, 9/10/2021
 """
 import gc
 import glob
+import re
 
 import torch.optim
 import torch.optim as optim
@@ -167,10 +168,10 @@ def extra_intermediate_outputs_and_targets(model, data_loader):
 	return new_x, y * 100, preds
 
 
-def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hidden_size=64):
+def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hidden_size=64, n_folds=10):
 	seed_everything()
 	device = get_default_device()
-	preprocessor = PawPreprocessor(root_dir=data_root, train=True, model_dir=model_root)
+	preprocessor = PawPreprocessor(root_dir=data_root, train=True, n_folds=n_folds, model_dir=model_root)
 	test_preprocessor = PawPreprocessor(root_dir=data_root, train=False)
 
 	preds = None
@@ -178,7 +179,9 @@ def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hi
 
 	for model_path in all_models_checkpoints:
 		fold_info = [f for f in model_path.split('_') if f.startswith('fold')][0]
-		fold = int(fold_info[-1]) - 1
+		pattern = re.compile(r'\d+')
+		result = pattern.search(fold_info)
+		fold = int(result.group()) - 1
 		train_img_paths, train_dense, train_targets = preprocessor.get_data(fold=fold, for_validation=False)
 		valid_img_paths, valid_dense, valid_targets = preprocessor.get_data(fold=fold, for_validation=True)
 
@@ -233,7 +236,6 @@ def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hi
 				'max_delta_step': trial.suggest_int('max_delta_step', 0, 11),  # default = 0
 				'reg_lambda': trial.suggest_uniform('reg_lambda', 0, 1),
 				'reg_alpha': trial.suggest_uniform('reg_alpha', 0, 1),
-				'subsample': trial.suggest_uniform('subsample', 0, 1)  # default = 1
 			}
 
 			xgb_model = xgb.XGBRegressor(random_state=RANDOM_SEED, **params)
@@ -246,7 +248,7 @@ def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hi
 			return rmse_val
 
 		study = optuna.create_study()
-		study.optimize(loss_func, n_trials=100)
+		study.optimize(loss_func, n_trials=1000)
 		best_params = study.best_params
 		print(f'the best model params are found on Trial #{study.best_trial.number}')
 		print(best_params)
