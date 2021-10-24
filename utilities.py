@@ -95,25 +95,26 @@ val_transform = transforms.Compose(
 def get_albumentation_transform_for_training(img_size):
 	aug_transform = albumentations.Compose(
 		[
-			albumentations.Resize(img_size, img_size),
+			# albumentations.Resize(img_size, img_size),
+			albumentations.RandomResizedCrop(img_size, img_size, scale=(0.8, 1), ratio=(1, 1), p=0.9),
 			albumentations.Normalize(
 				mean=[0.485, 0.456, 0.406],
 				std=[0.229, 0.224, 0.225],
 			),
 			albumentations.HorizontalFlip(p=0.5),
 			albumentations.VerticalFlip(p=0.5),
-			albumentations.Rotate(limit=180, p=0.7),
-			albumentations.ShiftScaleRotate(
-				shift_limit=0.1, scale_limit=0.1, rotate_limit=45, p=0.5
-			),
-			albumentations.HueSaturationValue(
-				hue_shift_limit=0.2, sat_shift_limit=0.2,
-				val_shift_limit=0.2, p=0.5
-			),
-			albumentations.RandomBrightnessContrast(
-				brightness_limit=(-0.1, 0.1),
-				contrast_limit=(-0.1, 0.1), p=0.5
-			),
+			# albumentations.Rotate(limit=180, p=0.7),
+			# albumentations.ShiftScaleRotate(
+			# 	shift_limit=0.1, scale_limit=0.1, rotate_limit=45, p=0.5
+			# ),
+			# albumentations.HueSaturationValue(
+			# 	hue_shift_limit=0.2, sat_shift_limit=0.2,
+			# 	val_shift_limit=0.2, p=0.5
+			# ),
+			# albumentations.RandomBrightnessContrast(
+			# 	brightness_limit=(-0.1, 0.1),
+			# 	contrast_limit=(-0.1, 0.1), p=0.5
+			# ),
 			ToTensorV2(p=1.0),
 		]
 	)

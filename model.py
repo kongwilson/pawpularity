@@ -124,7 +124,7 @@ class PawClassifier(PawBenchmark):
 
 class PawVisionTransformerTiny16Patch384(nn.Module):
 
-	def __init__(self, in_chan, dense_feature_size, embed_size, hidden_size, output_size=1, dropout=0.5, pretrained=True):
+	def __init__(self, in_chan, dense_feature_size, embed_size, hidden_size, output_size=1, dropout=0.2, pretrained=True):
 
 		super().__init__()
 		self.pretrained = pretrained
