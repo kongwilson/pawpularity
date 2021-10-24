@@ -250,7 +250,7 @@ def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hi
 		model_name = os.path.basename(model_path)
 
 		study = optuna.create_study(direction='minimize', study_name=model_name, storage=f'sqlite:///{model_name}.db')
-		study.optimize(loss_func, n_trials=1000)
+		study.optimize(loss_func, n_trials=200)
 		best_params = study.best_params
 		print(f'the best model params are found on Trial #{study.best_trial.number}')
 		print(best_params)

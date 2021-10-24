@@ -57,7 +57,7 @@ def infer(model_type, img_size=384, batch_size=4, embed_size=128, hidden_size=64
 	return preds
 
 
-def infer_with_xgb(model_type, img_size=384, batch_size=4, embed_size=128, hidden_size=64):
+def infer_with_xgb(model_type, img_size=384, batch_size=4, embed_size=128, hidden_size=64, xgb_only=False):
 
 	seed_everything()
 	device = get_default_device()
@@ -96,7 +96,10 @@ def infer_with_xgb(model_type, img_size=384, batch_size=4, embed_size=128, hidde
 		xgb_preds = xgb_model.predict(xgb_test_x).reshape((-1, 1))
 		xgb_preds = prediction_validity_check(xgb_preds)
 
-		temp_preds = (xgb_preds + dl_preds) / 2
+		if xgb_only:
+			temp_preds = xgb_preds
+		else:
+			temp_preds = (xgb_preds + dl_preds) / 2
 
 		if preds is None:
 			preds = temp_preds
