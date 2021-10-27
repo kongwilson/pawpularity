@@ -320,7 +320,7 @@ def get_activation(name):
 	return hook
 
 
-def train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patient=3, fine_tune=False):
+def train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patience=3, fine_tune=False):
 	seed_everything()
 	gc.enable()
 	img_size = 384
@@ -336,23 +336,7 @@ def train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patient
 	preprocessor = PawPreprocessor(root_dir=data_root, train=True, n_folds=n_folds, model_dir=model_root)
 	device = get_default_device()
 
-	epochs_with_no_improvement = 0
-	fine_tune_with_no_augmentation = False
-
 	for fold in range(n_folds):
-
-		if epochs_with_no_improvement >= patient:
-			if fine_tune_with_no_augmentation:
-				print(f'No improvement with no augmentation for {patient} epochs, early stop')
-				break
-			else:
-				epochs_with_no_improvement = 0
-				fine_tune_with_no_augmentation = True
-
-		if fine_tune_with_no_augmentation:
-			train_aug = get_albumentation_transform_for_validation
-		else:
-			train_aug = get_albumentation_transform_for_training
 
 		train_img_paths, train_dense, train_targets = preprocessor.get_data(fold=fold, for_validation=False)
 		valid_img_paths, valid_dense, valid_target = preprocessor.get_data(fold=fold, for_validation=True)
@@ -360,7 +344,7 @@ def train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patient
 			images_filepaths=train_img_paths,
 			dense_features=train_dense,
 			targets=train_targets,
-			transform=train_aug(img_size)  # without augmentation, serious overfitting
+			transform=get_albumentation_transform_for_training(img_size)  # without augmentation, serious overfitting
 		)
 
 		valid_dataset = PawDataset(
@@ -392,7 +376,7 @@ def train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patient
 		model = model_type(3, len(preprocessor.features), embed_size, hidden_size, pretrained=True, fine_tune=fine_tune)
 		model.to(device)
 		loss_func = nn.BCEWithLogitsLoss()
-		optimizer = torch.optim.AdamW(model.parameters(), lr=max_lr, weight_decay=weight_decay)
+		optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
 		# scheduler = OneCycleLR(
 		#     optimizer,
 		#     max_lr=max_lr,
@@ -401,16 +385,44 @@ def train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patient
 		# )
 		scheduler = CosineAnnealingWarmRestarts(
 			optimizer,
-			T_0=len(train_dataset) * 2,
+			T_0=100,
 			eta_min=min_lr,
 			last_epoch=-1
 		)
+
+		epochs_with_no_improvement = 0
+		fine_tune_with_no_augmentation = False
 
 		# Training and Validation Loop
 		best_rmse = np.inf
 		best_epoch = np.inf
 		best_model_path = None
 		for epoch in range(1, epochs + 1):
+
+			if epochs_with_no_improvement > patience:
+				if fine_tune_with_no_augmentation:
+					print(f'No improvement with no augmentation for {patience} epochs, early stop')
+					break
+				else:
+					print(f'No improvement with AUGMENTATION for {patience} epochs, switch to NON-AUG training')
+					epochs_with_no_improvement = 0
+					fine_tune_with_no_augmentation = True
+
+			if fine_tune_with_no_augmentation:
+				train_dataset = PawDataset(
+					images_filepaths=train_img_paths,
+					dense_features=train_dense,
+					targets=train_targets,
+					transform=get_albumentation_transform_for_validation(img_size)
+				)
+				train_loader = DataLoader(
+					dataset=train_dataset,
+					batch_size=batch_size,
+					num_workers=0,
+					shuffle=True,
+					pin_memory=False,
+					# collate_fn=MyCollate(),
+				)
 
 			train_epoch(train_loader, model, loss_func, optimizer, epoch, scheduler)
 
@@ -437,8 +449,8 @@ def train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patient
 
 
 if __name__ == '__main__':
-	train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patient=3, fine_tune=True)
-	train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patient=3, fine_tune=False)
+	train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patience=3, fine_tune=True)
+	train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patience=3, fine_tune=False)
 	# preds1 = xgb_to_the_result(PawSwinTransformerLarge4Patch12Win384)
 	preds2 = xgb_to_the_result(PawSwinTransformerLarge4Patch12Win22k384)
 	# print(preds1)
