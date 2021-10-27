@@ -320,7 +320,7 @@ def get_activation(name):
 	return hook
 
 
-def train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patient=3, fine_tune=False, device_index=0):
+def train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patient=3, fine_tune=False):
 	seed_everything()
 	gc.enable()
 	img_size = 384
@@ -334,7 +334,7 @@ def train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patient
 	min_lr = 1e-7
 	weight_decay = 1e-6
 	preprocessor = PawPreprocessor(root_dir=data_root, train=True, n_folds=n_folds, model_dir=model_root)
-	device = get_default_device(device_index)
+	device = get_default_device()
 
 	epochs_with_no_improvement = 0
 	fine_tune_with_no_augmentation = False

@@ -26,6 +26,7 @@ test_dir = os.path.join(data_root, 'test')
 
 # Random Seed Initialize
 RANDOM_SEED = 42
+DEVICE_INDEX = 0
 
 
 def seed_everything(seed=RANDOM_SEED):
@@ -184,9 +185,9 @@ def rmse_from_classifier_output(output: torch.Tensor, target: torch.Tensor):
 	return mean_squared_error(target, y_pred, squared=False)
 
 
-def get_default_device(device_index=0):
+def get_default_device():
 	# pick GPU if available, else CPU
 	if torch.cuda.is_available():
-		return torch.cuda.device(device_index)
+		return torch.device(f'cuda:{DEVICE_INDEX}')
 	else:
 		return torch.device('cpu')
