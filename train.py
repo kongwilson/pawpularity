@@ -320,7 +320,7 @@ def get_activation(name):
 	return hook
 
 
-def train_benchmark():
+def train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patient=3, fine_tune=False):
 	seed_everything()
 	gc.enable()
 	img_size = 384
@@ -335,7 +335,24 @@ def train_benchmark():
 	weight_decay = 1e-6
 	preprocessor = PawPreprocessor(root_dir=data_root, train=True, n_folds=n_folds, model_dir=model_root)
 	device = get_default_device()
+
+	epochs_with_no_improvement = 0
+	fine_tune_with_no_augmentation = False
+
 	for fold in range(n_folds):
+
+		if epochs_with_no_improvement >= patient:
+			if fine_tune_with_no_augmentation:
+				print(f'No improvement with no augmentation for {patient} epochs, early stop')
+				break
+			else:
+				epochs_with_no_improvement = 0
+				fine_tune_with_no_augmentation = True
+
+		if fine_tune_with_no_augmentation:
+			train_aug = get_albumentation_transform_for_validation
+		else:
+			train_aug = get_albumentation_transform_for_training
 
 		train_img_paths, train_dense, train_targets = preprocessor.get_data(fold=fold, for_validation=False)
 		valid_img_paths, valid_dense, valid_target = preprocessor.get_data(fold=fold, for_validation=True)
@@ -343,7 +360,7 @@ def train_benchmark():
 			images_filepaths=train_img_paths,
 			dense_features=train_dense,
 			targets=train_targets,
-			transform=get_albumentation_transform_for_training(img_size)  # without augmentation, serious overfitting
+			transform=train_aug(img_size)  # without augmentation, serious overfitting
 		)
 
 		valid_dataset = PawDataset(
@@ -372,7 +389,7 @@ def train_benchmark():
 		)
 
 		# model = PawClassifier(img_size, img_size, 3, len(preprocessor.features), embed_size, hidden_size)
-		model = PawSwinTransformerLarge4Patch12Win22k384(3, len(preprocessor.features), embed_size, hidden_size)
+		model = model_type(3, len(preprocessor.features), embed_size, hidden_size, pretrained=True, fine_tune=fine_tune)
 		model.to(device)
 		loss_func = nn.BCEWithLogitsLoss()
 		optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -400,6 +417,7 @@ def train_benchmark():
 			predictions, valid_targets = validate(val_loader, model, loss_func, epoch)
 			rmse = round(mean_squared_error(valid_targets, predictions, squared=False), 5)
 			if rmse <= best_rmse:
+				epochs_with_no_improvement = 0
 				best_rmse = rmse
 				best_epoch = epoch
 				if best_model_path is not None:
@@ -407,6 +425,8 @@ def train_benchmark():
 				best_model_path = os.path.join(
 					model_root, f"{type(model).__name__}_fold{fold + 1}_epoch{epoch}_{rmse}_rmse.pth.tar")
 				torch.save(model.state_dict(), best_model_path)
+			else:
+				epochs_with_no_improvement += 1
 
 		print(f'The best RMSE: {best_rmse} for fold {fold + 1} was achieved on epoch: {best_epoch}.')
 		print(f'The Best saved model is: {best_model_path}')
@@ -417,8 +437,9 @@ def train_benchmark():
 
 
 if __name__ == '__main__':
-	train_benchmark()
-	preds1 = xgb_to_the_result(PawSwinTransformerLarge4Patch12Win384)
+	train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patient=3, fine_tune=True)
+	train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patient=3, fine_tune=False)
+	# preds1 = xgb_to_the_result(PawSwinTransformerLarge4Patch12Win384)
 	preds2 = xgb_to_the_result(PawSwinTransformerLarge4Patch12Win22k384)
-	print(preds1)
+	# print(preds1)
 	print(preds2)

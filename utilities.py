@@ -107,14 +107,14 @@ def get_albumentation_transform_for_training(img_size):
 			# albumentations.ShiftScaleRotate(
 			# 	shift_limit=0.1, scale_limit=0.1, rotate_limit=45, p=0.5
 			# ),
-			# albumentations.HueSaturationValue(
-			# 	hue_shift_limit=0.2, sat_shift_limit=0.2,
-			# 	val_shift_limit=0.2, p=0.5
-			# ),
-			# albumentations.RandomBrightnessContrast(
-			# 	brightness_limit=(-0.1, 0.1),
-			# 	contrast_limit=(-0.1, 0.1), p=0.5
-			# ),
+			albumentations.HueSaturationValue(
+				hue_shift_limit=20, sat_shift_limit=30,
+				val_shift_limit=20, p=0.5
+			),
+			albumentations.RandomBrightnessContrast(
+				brightness_limit=0.2,
+				contrast_limit=0.2, p=0.5
+			),
 			ToTensorV2(p=1.0),
 		]
 	)

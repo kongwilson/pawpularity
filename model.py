@@ -124,10 +124,13 @@ class PawClassifier(PawBenchmark):
 
 class PawVisionTransformerTiny16Patch384(nn.Module):
 
-	def __init__(self, in_chan, dense_feature_size, embed_size, hidden_size, output_size=1, dropout=0.2, pretrained=True):
+	def __init__(
+			self, in_chan, dense_feature_size, embed_size, hidden_size, output_size=1, dropout=0.2,
+			pretrained=True, fine_tune=False):
 
 		super().__init__()
 		self.pretrained = pretrained
+		self.fine_tune = fine_tune
 		self.model = self._get_pretrained_model(in_chan)
 		n_features = self.model.head.in_features
 		self.model.head = nn.Linear(n_features, embed_size)
@@ -143,6 +146,15 @@ class PawVisionTransformerTiny16Patch384(nn.Module):
 		return model
 
 	def forward(self, image, dense):
+
+		if self.fine_tune:
+			for name, param in self.model.named_parameters():
+				print(name, param.requires_grad)
+				if 'head.weight' in name or 'head.bias' in name:
+					param.requires_grad = True
+				else:
+					param.requires_grad = False
+
 		embeddings = self.model(image)
 		x = self.dropout(embeddings)
 		x = torch.cat([x, dense], dim=1)
