@@ -324,9 +324,9 @@ def train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patient
 	seed_everything()
 	gc.enable()
 	img_size = 384
-	n_folds = 5
+	n_folds = 10
 	batch_size = 1
-	epochs = 10
+	epochs = 20
 	embed_size = 128
 	hidden_size = 64
 	lr = 1e-5
