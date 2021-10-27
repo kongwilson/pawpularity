@@ -149,7 +149,6 @@ class PawVisionTransformerTiny16Patch384(nn.Module):
 
 		if self.fine_tune:
 			for name, param in self.model.named_parameters():
-				print(name, param.requires_grad)
 				if 'head.weight' in name or 'head.bias' in name:
 					param.requires_grad = True
 				else:
