@@ -326,11 +326,11 @@ def train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patient
 	img_size = 384
 	n_folds = 10
 	batch_size = 1
-	epochs = 20
+	epochs = 30
 	embed_size = 128
 	hidden_size = 64
 	lr = 1e-5
-	max_lr = 1e-4
+	max_lr = 1e-3
 	min_lr = 1e-7
 	weight_decay = 1e-6
 	preprocessor = PawPreprocessor(root_dir=data_root, train=True, n_folds=n_folds, model_dir=model_root)
@@ -392,7 +392,7 @@ def train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patient
 		model = model_type(3, len(preprocessor.features), embed_size, hidden_size, pretrained=True, fine_tune=fine_tune)
 		model.to(device)
 		loss_func = nn.BCEWithLogitsLoss()
-		optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+		optimizer = torch.optim.AdamW(model.parameters(), lr=max_lr, weight_decay=weight_decay)
 		# scheduler = OneCycleLR(
 		#     optimizer,
 		#     max_lr=max_lr,
@@ -401,7 +401,7 @@ def train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patient
 		# )
 		scheduler = CosineAnnealingWarmRestarts(
 			optimizer,
-			T_0=5,
+			T_0=len(train_dataset) * 2,
 			eta_min=min_lr,
 			last_epoch=-1
 		)

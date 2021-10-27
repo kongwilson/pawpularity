@@ -184,9 +184,9 @@ def rmse_from_classifier_output(output: torch.Tensor, target: torch.Tensor):
 	return mean_squared_error(target, y_pred, squared=False)
 
 
-def get_default_device():
+def get_default_device(device_index=0):
 	# pick GPU if available, else CPU
 	if torch.cuda.is_available():
-		return torch.device('cuda')
+		return torch.cuda.device(device_index)
 	else:
 		return torch.device('cpu')
