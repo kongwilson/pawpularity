@@ -153,6 +153,18 @@ def get_data(for_test=False):
 	return data
 
 
+def prediction_validity_check(preds):
+	nan_mask = np.isnan(preds)
+	inf_mask = np.isinf(preds)
+	low_mask = preds < 0
+	high_mask = preds > 100
+	preds[nan_mask] = 0
+	preds[inf_mask] = 100
+	preds[low_mask] = 0
+	preds[high_mask] = 100
+	return preds
+
+
 class MetricMonitor:
 
 	def __init__(self, float_precision=3):
