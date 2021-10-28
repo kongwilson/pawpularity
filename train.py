@@ -399,7 +399,7 @@ def train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patienc
 		best_model_path = None
 		for epoch in range(1, epochs + 1):
 
-			if epochs_with_no_improvement > patience:
+			if epochs_with_no_improvement >= patience:
 				if fine_tune_with_no_augmentation:
 					print(f'No improvement with no augmentation for {patience} epochs, early stop')
 					break
@@ -434,8 +434,13 @@ def train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patienc
 				best_epoch = epoch
 				if best_model_path is not None:
 					os.remove(best_model_path)
+				if fine_tune:
+					fine_tune_flag = 'fine-tuned'
+				else:
+					fine_tune_flag = 'retrained'
 				best_model_path = os.path.join(
-					model_root, f"{type(model).__name__}_fold{fold + 1}_epoch{epoch}_{rmse}_rmse.pth.tar")
+					model_root,
+					f"{type(model).__name__}_fold{fold + 1}_epoch{epoch}_{rmse}_rmse_{fine_tune_flag}.pth.tar")
 				torch.save(model.state_dict(), best_model_path)
 			else:
 				epochs_with_no_improvement += 1
