@@ -174,6 +174,11 @@ class Learner(object):
 				pretrained=True, fine_tune=self.fine_tune)
 
 			epoch_start = 1
+
+			# Training and Validation Loop
+			best_rmse = np.inf
+			best_epoch = np.inf
+			best_model_path = None
 			if resume:
 				model_paths = glob.glob(model_root + os.path.sep + f'{str(model)}_*.pth.tar')
 				model_paths = [p for p in model_paths if f'_fold{fold + 1}' in p]
@@ -182,6 +187,9 @@ class Learner(object):
 					model.load_state_dict(torch.load(model_path))  # always load the 0-th
 					epoch_start = self._get_epoch_number_from_model_name(model_path)
 					print(f'resume training from epoch {epoch_start} for fold {fold + 1}')
+					best_model_path = model_path
+					best_epoch = epoch_start
+					best_rmse = self._get_rmse_from_model_name(model_path)
 
 			model.to(self.device)
 			loss_func = nn.BCEWithLogitsLoss()
@@ -202,10 +210,6 @@ class Learner(object):
 			epochs_with_no_improvement = 0
 			fine_tune_with_no_augmentation = False
 
-			# Training and Validation Loop
-			best_rmse = np.inf
-			best_epoch = np.inf
-			best_model_path = None
 			for epoch in range(epoch_start, self.epochs + 1):
 
 				if epochs_with_no_improvement >= self.patience:
@@ -246,7 +250,7 @@ class Learner(object):
 		return
 
 	@staticmethod
-	def _get_fold_index_from_model_name(model_path):
+	def _get_fold_index_from_model_name(model_path) -> int:
 		fold_info = [f for f in model_path.split('_') if f.startswith('fold')][0]
 		pattern = re.compile(r'\d+')
 		result = pattern.search(fold_info)
@@ -254,12 +258,19 @@ class Learner(object):
 		return fold
 
 	@staticmethod
-	def _get_epoch_number_from_model_name(model_path):
+	def _get_epoch_number_from_model_name(model_path) -> int:
 		fold_info = [f for f in model_path.split('_') if f.startswith('epoch')][0]
 		pattern = re.compile(r'\d+')
 		result = pattern.search(fold_info)
 		epoch = int(result.group())
 		return epoch
+
+	@staticmethod
+	def _get_rmse_from_model_name(model_path) -> float:
+		basename = os.path.basename(model_path)
+		rmse_txt = basename.split('-rmse')[0].split('_')[-1]
+		rmse = float(rmse_txt)
+		return rmse
 
 	def train_and_fine_tune_xgb_model(self):
 		seed_everything()
