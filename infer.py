@@ -90,7 +90,7 @@ def infer_with_xgb(model_type, img_size=384, batch_size=4, embed_size=128, hidde
 			pin_memory=True
 		)
 
-		xgb_test_x, target, dl_preds = extra_intermediate_outputs_and_targets(model, test_loader)
+		xgb_test_x, target, dl_preds = extract_intermediate_outputs_and_targets(model, test_loader)
 		xgb_model = xgb.XGBRegressor()
 		xgb_model.load_model(xgb_path)
 		xgb_preds = xgb_model.predict(xgb_test_x).reshape((-1, 1))

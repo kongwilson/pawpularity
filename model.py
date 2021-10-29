@@ -131,6 +131,10 @@ class PawVisionTransformerTiny16Patch384(nn.Module):
 		super().__init__()
 		self.pretrained = pretrained
 		self.fine_tune = fine_tune
+		self.dense_feature_size = dense_feature_size
+		self.embed_size = embed_size
+		self.hidden_size = hidden_size
+		self.dropout_rate = dropout
 		self.model = self._get_pretrained_model(in_chan)
 		n_features = self.model.head.in_features
 		self.model.head = nn.Linear(n_features, embed_size)
@@ -140,6 +144,11 @@ class PawVisionTransformerTiny16Patch384(nn.Module):
 			nn.Linear(hidden_size, output_size)
 		)
 		self.dropout = nn.Dropout(dropout)
+
+	def __str__(self):
+		return \
+			f'{type(self).__name__}_dense-{self.dense_feature_size}_embed-{self.embed_size}_' \
+			f'hidden-{self.hidden_size}_dropout-{self.dropout_rate}'
 
 	def _get_pretrained_model(self, in_chan):
 		model = timm.models.vit_tiny_patch16_384(pretrained=self.pretrained, in_chans=in_chan)

@@ -141,7 +141,7 @@ def validate(val_loader, model, loss_func, epoch):
 	return final_outputs, final_targets
 
 
-def extra_intermediate_outputs_and_targets(model, data_loader):
+def extract_intermediate_outputs_and_targets(model, data_loader):
 	device = get_default_device()
 	new_x = None
 	y = None
@@ -175,7 +175,8 @@ def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hi
 	test_preprocessor = PawPreprocessor(root_dir=data_root, train=False)
 
 	preds = None
-	all_models_checkpoints = glob.glob(model_root + os.path.sep + f'{model_type.__name__}_*.pth.tar')
+	model = model_type(3, len(preprocessor.features), embed_size, hidden_size)
+	all_models_checkpoints = glob.glob(model_root + os.path.sep + f'{str(model)}_*.pth.tar')
 
 	for model_path in all_models_checkpoints:
 		fold_info = [f for f in model_path.split('_') if f.startswith('fold')][0]
@@ -222,8 +223,8 @@ def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hi
 		model.load_state_dict(torch.load(model_path))
 		model = model.to(device)
 
-		xgb_train_x, xgb_train_y, train_preds = extra_intermediate_outputs_and_targets(model, train_loader)
-		xgb_val_x, xgb_val_y, val_preds = extra_intermediate_outputs_and_targets(model, val_loader)
+		xgb_train_x, xgb_train_y, train_preds = extract_intermediate_outputs_and_targets(model, train_loader)
+		xgb_val_x, xgb_val_y, val_preds = extract_intermediate_outputs_and_targets(model, val_loader)
 
 		def loss_func(trial: optuna.trial.Trial):
 			params = {
@@ -284,7 +285,7 @@ def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hi
 			shuffle=False,
 			pin_memory=False,
 		)
-		xgb_test_x, xgb_test_y, test_preds = extra_intermediate_outputs_and_targets(model, test_loader)
+		xgb_test_x, xgb_test_y, test_preds = extract_intermediate_outputs_and_targets(model, test_loader)
 		xgb_test_preds = xgb_model.predict(xgb_test_x)
 		xgb_test_preds = prediction_validity_check(xgb_test_preds)
 
@@ -428,7 +429,7 @@ def train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patienc
 					fine_tune_flag = 'retrained'
 				best_model_path = os.path.join(
 					model_root,
-					f"{type(model).__name__}_fold{fold + 1}_epoch{epoch}_{rmse}_rmse_{fine_tune_flag}.pth.tar")
+					f"{str(model)}_fold{fold + 1}_epoch{epoch}_{rmse}_rmse_{fine_tune_flag}.pth.tar")
 				torch.save(model.state_dict(), best_model_path)
 			else:
 				epochs_with_no_improvement += 1
