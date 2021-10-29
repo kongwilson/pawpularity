@@ -159,7 +159,7 @@ class Learner(object):
 
 		return new_x, y * 100, preds
 
-	def perform_training(self):
+	def perform_training(self, resume=False):
 		preprocessor = PawPreprocessor(root_dir=data_root, train=True, n_folds=self.n_folds, model_dir=model_root)
 		for fold in range(self.n_folds):
 
@@ -172,6 +172,17 @@ class Learner(object):
 			model = self.model_type(
 				3, len(preprocessor.features), self.embed_size, self.hidden_size,
 				pretrained=True, fine_tune=self.fine_tune)
+
+			epoch_start = 1
+			if resume:
+				model_paths = glob.glob(model_root + os.path.sep + f'{str(model)}_*.pth.tar')
+				model_paths = [p for p in model_paths if f'_fold{fold + 1}' in p]
+				if len(model_paths) != 0:
+					model_path = model_paths[0]
+					model.load_state_dict(torch.load(model_path))  # always load the 0-th
+					epoch_start = self._get_epoch_number_from_model_name(model_path)
+					print(f'resume training from epoch {epoch_start} for fold {fold + 1}')
+
 			model.to(self.device)
 			loss_func = nn.BCEWithLogitsLoss()
 			optimizer = torch.optim.AdamW(model.parameters(), lr=self.lr, weight_decay=self.weight_decay)
@@ -195,7 +206,7 @@ class Learner(object):
 			best_rmse = np.inf
 			best_epoch = np.inf
 			best_model_path = None
-			for epoch in range(1, self.epochs + 1):
+			for epoch in range(epoch_start, self.epochs + 1):
 
 				if epochs_with_no_improvement >= self.patience:
 					if fine_tune_with_no_augmentation:
@@ -234,6 +245,118 @@ class Learner(object):
 			torch.cuda.empty_cache()
 		return
 
+	@staticmethod
+	def _get_fold_index_from_model_name(model_path):
+		fold_info = [f for f in model_path.split('_') if f.startswith('fold')][0]
+		pattern = re.compile(r'\d+')
+		result = pattern.search(fold_info)
+		fold = int(result.group()) - 1
+		return fold
+
+	@staticmethod
+	def _get_epoch_number_from_model_name(model_path):
+		fold_info = [f for f in model_path.split('_') if f.startswith('epoch')][0]
+		pattern = re.compile(r'\d+')
+		result = pattern.search(fold_info)
+		epoch = int(result.group())
+		return epoch
+
+	def train_and_fine_tune_xgb_model(self):
+		seed_everything()
+		device = get_default_device()
+		preprocessor = PawPreprocessor(
+			root_dir=self.data_root, train=True, n_folds=self.n_folds, model_dir=self.model_root)
+		test_preprocessor = PawPreprocessor(root_dir=self.data_root, train=False)
+
+		preds = None
+		model = self.model_type(3, len(preprocessor.features), self.embed_size, self.hidden_size)
+		all_models_checkpoints = glob.glob(model_root + os.path.sep + f'{str(model)}_*.pth.tar')
+
+		for model_path in all_models_checkpoints:
+
+			fold = self._get_fold_index_from_model_name(model_path)
+
+			train_loader = preprocessor.get_dataloader(
+				fold=fold, for_validation=False,
+				transform=get_albumentation_transform_for_training(self.img_size), batch_size=self.batch_size)
+			val_loader = preprocessor.get_dataloader(
+				fold=fold, for_validation=True,
+				transform=get_albumentation_transform_for_validation(self.img_size), batch_size=self.batch_size)
+
+			model = self.model_type(3, len(preprocessor.features), self.embed_size, self.hidden_size)
+			# WKNOTE: get activation from an intermediate layer
+			model.model.head.register_forward_hook(self.get_activate_for_model_hook('swin_head'))
+			model.load_state_dict(torch.load(model_path))
+			model = model.to(device)
+
+			xgb_train_x, xgb_train_y, train_preds = self.extract_intermediate_outputs_and_targets(model, train_loader)
+			xgb_val_x, xgb_val_y, val_preds = self.extract_intermediate_outputs_and_targets(model, val_loader)
+
+			def loss_func(trial: optuna.trial.Trial):
+				params = {
+					'n_estimators': trial.suggest_int('n_estimators', 10, 1000),  # default = 100
+					'booster': trial.suggest_categorical('booster', ['gbtree', 'gblinear', 'dart']),
+					# default = 'gbtree'
+					'gamma': trial.suggest_uniform('gamma', 0, 100),  # default = 0
+					'max_depth': trial.suggest_int('max_depth', 1, 11),
+					# default = 6, the deeper, the easier to overfit
+					'learning_rate': trial.suggest_uniform('learning_rate', 0, 1),  # default = 0.3
+					'min_child_weight': trial.suggest_uniform('min_child_weight', 0.1, 100),  # default = 1
+					'max_delta_step': trial.suggest_int('max_delta_step', 0, 11),  # default = 0
+					'reg_lambda': trial.suggest_uniform('reg_lambda', 0, 1),
+					'reg_alpha': trial.suggest_uniform('reg_alpha', 0, 1),
+				}
+
+				xgb_model = xgb.XGBRegressor(random_state=RANDOM_SEED, **params)
+				xgb_model.fit(xgb_train_x, xgb_train_y)
+				xgb_val_preds = xgb_model.predict(xgb_val_x)
+				xgb_val_preds = prediction_validity_check(xgb_val_preds)
+
+				rmse_val = round(mean_squared_error(xgb_val_y, xgb_val_preds, squared=False), 5)
+
+				return rmse_val
+
+			model_name = os.path.basename(model_path)
+
+			study_db_path = os.path.join(self.model_root, f'{model_name}.db')
+			study = optuna.create_study(
+				direction='minimize', study_name=model_name,
+				storage=f'sqlite:///{study_db_path}', load_if_exists=True)
+			study.optimize(loss_func, n_trials=200)
+			best_params = study.best_params
+			print(f'the best model params are found on Trial #{study.best_trial.number}')
+			print(best_params)
+
+			xgb_model = xgb.XGBRegressor(random_state=RANDOM_SEED, **best_params)
+			xgb_model.fit(xgb_train_x, xgb_train_y)
+			xgb_train_preds = xgb_model.predict(xgb_train_x)
+			xgb_val_preds = xgb_model.predict(xgb_val_x)
+
+			rmse_train = round(mean_squared_error(xgb_train_y, xgb_train_preds, squared=False), 5)
+			rmse_val = round(mean_squared_error(xgb_val_y, xgb_val_preds, squared=False), 5)
+
+			print(f'train rmse: {rmse_train}, val rmse: {rmse_val}')
+
+			model_name = os.path.basename(model_path)
+			model_path = os.path.join(
+				model_root, f"XGB-{rmse_val:.5f}_{model_name}.json")
+			xgb_model.save_model(model_path)
+
+			test_loader = test_preprocessor.get_dataloader()
+
+			xgb_test_x, xgb_test_y, test_preds = self.extract_intermediate_outputs_and_targets(model, test_loader)
+			xgb_test_preds = xgb_model.predict(xgb_test_x)
+			xgb_test_preds = prediction_validity_check(xgb_test_preds)
+
+			if preds is None:
+				preds = xgb_test_preds
+			else:
+				preds += xgb_test_preds
+
+		preds /= (len(all_models_checkpoints))
+
+		return preds
+
 
 if __name__ == '__main__':
 	learning_params = dict(
@@ -254,5 +377,5 @@ if __name__ == '__main__':
 		data_root=data_root, model_root=model_root, model_type=PawSwinTransformerLarge4Patch12Win22k384,
 		fine_tune=True, **learning_params
 	)
-	learner.perform_training()
+	learner.perform_training(resume=True)
 
