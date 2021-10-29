@@ -20,67 +20,6 @@ from model import *
 from utilities import *
 
 
-def train():
-	is_train = True
-
-	train_loader, dataset = get_loader(
-		root_folder=data_root,
-		is_train=is_train,
-		transform=train_transform,
-		num_workers=1,
-	)
-
-	# Start training
-	torch.backends.cudnn.benchmark = True
-	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-	load_model = False
-	save_model = True
-
-	# Hyperparameters
-	embed_size = 256
-	hidden_size = 256
-	num_layers = 2
-	learning_rate = 3e-4
-	num_epochs = 100
-
-	# for tensorboard
-	# writer = SummaryWriter(input_root)
-	step = 0
-
-	# initialise model, loss etc
-	model = PawpularityNN(embed_size, hidden_size, num_layers).to(device)
-	optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-	criterion = F.mse_loss
-
-	if load_model:
-		step = load_checkpoint(torch.load(os.path.join(data_root, 'my_checkpoint.pth.tar')), model, optimizer)
-
-	model.train()
-
-	for epoch in tqdm(range(num_epochs)):
-
-		if save_model:
-			checkpoint = {
-				'state_dict': model.state_dict(),
-				'optimizer': optimizer.state_dict(),
-				'step': step,
-			}
-			save_checkpoint(checkpoint)
-
-		for idx, (imgs, y) in enumerate(train_loader):
-			imgs = imgs.to(device)
-			y = y.to(device)
-			outputs = model(imgs)
-			loss = criterion(outputs, y)
-
-			# writer.add_scalar('Training loss', loss.item(), global_step=step)
-			step += 1
-
-			optimizer.zero_grad()
-			loss.backward(loss)
-			optimizer.step()
-
-
 def train_epoch(train_loader, model, loss_func, optimizer, epoch, scheduler=None):
 	metric_monitor = MetricMonitor()
 	model.train()
@@ -183,39 +122,13 @@ def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hi
 		pattern = re.compile(r'\d+')
 		result = pattern.search(fold_info)
 		fold = int(result.group()) - 1
-		train_img_paths, train_dense, train_targets = preprocessor.get_data(fold=fold, for_validation=False)
-		valid_img_paths, valid_dense, valid_targets = preprocessor.get_data(fold=fold, for_validation=True)
 
-		train_dataset = PawDataset(
-			images_filepaths=train_img_paths,
-			dense_features=train_dense,
-			targets=train_targets,
-			transform=get_albumentation_transform_for_training(img_size)  # without augmentation, serious overfitting
-		)
-
-		valid_dataset = PawDataset(
-			images_filepaths=valid_img_paths,
-			dense_features=valid_dense,
-			targets=valid_targets,
-			transform=get_albumentation_transform_for_validation(img_size)
-		)
-
-		train_loader = DataLoader(
-			dataset=train_dataset,
-			batch_size=batch_size,
-			num_workers=0,
-			shuffle=True,
-			pin_memory=False,
-		)
-
-		val_loader = DataLoader(
-			dataset=valid_dataset,
-			batch_size=batch_size,
-			num_workers=0,
-			shuffle=False,
-			pin_memory=False,
-			# collate_fn=MyCollate(),
-		)
+		train_loader = preprocessor.get_dataloader(
+			fold=fold, for_validation=False,
+			transform=get_albumentation_transform_for_training(img_size), batch_size=batch_size)
+		val_loader = preprocessor.get_dataloader(
+			fold=fold, for_validation=True,
+			transform=get_albumentation_transform_for_validation(img_size), batch_size=batch_size)
 
 		model = model_type(3, len(preprocessor.features), embed_size, hidden_size)
 		# WKNOTE: get activation from an intermediate layer
@@ -271,20 +184,8 @@ def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hi
 			model_root, f"XGB-{rmse_val:.5f}_{model_name}.json")
 		xgb_model.save_model(model_path)
 
-		test_img_paths, test_dense, test_targets = test_preprocessor.get_data()
-		test_dataset = PawDataset(
-			images_filepaths=test_img_paths,
-			dense_features=test_dense,
-			targets=test_targets,
-			transform=get_albumentation_transform_for_validation(img_size)
-		)
-		test_loader = DataLoader(
-			dataset=test_dataset,
-			batch_size=batch_size,
-			num_workers=0,
-			shuffle=False,
-			pin_memory=False,
-		)
+		test_loader = test_preprocessor.get_dataloader()
+
 		xgb_test_x, xgb_test_y, test_preds = extract_intermediate_outputs_and_targets(model, test_loader)
 		xgb_test_preds = xgb_model.predict(xgb_test_x)
 		xgb_test_preds = prediction_validity_check(xgb_test_preds)
@@ -327,39 +228,10 @@ def train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patienc
 
 	for fold in range(n_folds):
 
-		train_img_paths, train_dense, train_targets = preprocessor.get_data(fold=fold, for_validation=False)
-		valid_img_paths, valid_dense, valid_target = preprocessor.get_data(fold=fold, for_validation=True)
-		train_dataset = PawDataset(
-			images_filepaths=train_img_paths,
-			dense_features=train_dense,
-			targets=train_targets,
-			transform=get_albumentation_transform_for_training(img_size)  # without augmentation, serious overfitting
-		)
-
-		valid_dataset = PawDataset(
-			images_filepaths=valid_img_paths,
-			dense_features=valid_dense,
-			targets=valid_target,
-			transform=get_albumentation_transform_for_validation(img_size)
-		)
-
-		train_loader = DataLoader(
-			dataset=train_dataset,
-			batch_size=batch_size,
-			num_workers=0,
-			shuffle=True,
-			pin_memory=False,
-			# collate_fn=MyCollate(),
-		)
-
-		val_loader = DataLoader(
-			dataset=valid_dataset,
-			batch_size=batch_size,
-			num_workers=0,
-			shuffle=False,
-			pin_memory=False,
-			# collate_fn=MyCollate(),
-		)
+		train_loader = preprocessor.get_dataloader(
+			fold=fold, for_validation=False, transform=get_albumentation_transform_for_training(img_size))
+		val_loader = preprocessor.get_dataloader(
+			fold=fold, for_validation=True, transform=get_albumentation_transform_for_validation(img_size))
 
 		# model = PawClassifier(img_size, img_size, 3, len(preprocessor.features), embed_size, hidden_size)
 		model = model_type(3, len(preprocessor.features), embed_size, hidden_size, pretrained=True, fine_tune=fine_tune)
@@ -396,22 +268,8 @@ def train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patienc
 					print(f'No improvement with AUGMENTATION for {patience} epochs, switch to NON-AUG training')
 					epochs_with_no_improvement = 0
 					fine_tune_with_no_augmentation = True
-
-			if fine_tune_with_no_augmentation:
-				train_dataset = PawDataset(
-					images_filepaths=train_img_paths,
-					dense_features=train_dense,
-					targets=train_targets,
-					transform=get_albumentation_transform_for_validation(img_size)
-				)
-				train_loader = DataLoader(
-					dataset=train_dataset,
-					batch_size=batch_size,
-					num_workers=0,
-					shuffle=True,
-					pin_memory=False,
-					# collate_fn=MyCollate(),
-				)
+					train_loader = preprocessor.get_dataloader(
+						fold=fold, for_validation=False, transform=get_albumentation_transform_for_validation(img_size))
 
 			train_epoch(train_loader, model, loss_func, optimizer, epoch, scheduler)
 
@@ -423,13 +281,9 @@ def train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patienc
 				best_epoch = epoch
 				if best_model_path is not None:
 					os.remove(best_model_path)
-				if fine_tune:
-					fine_tune_flag = 'fine-tuned'
-				else:
-					fine_tune_flag = 'retrained'
 				best_model_path = os.path.join(
 					model_root,
-					f"{str(model)}_fold{fold + 1}_epoch{epoch}_{rmse}_rmse_{fine_tune_flag}.pth.tar")
+					f"{str(model)}_fold{fold + 1}_epoch{epoch}_{rmse}-rmse.pth.tar")
 				torch.save(model.state_dict(), best_model_path)
 			else:
 				epochs_with_no_improvement += 1

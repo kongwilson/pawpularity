@@ -146,9 +146,10 @@ class PawVisionTransformerTiny16Patch384(nn.Module):
 		self.dropout = nn.Dropout(dropout)
 
 	def __str__(self):
+		fine_tune_flag = 'fine-tuned' if self.fine_tune else 'retrained'
 		return \
 			f'{type(self).__name__}_dense-{self.dense_feature_size}_embed-{self.embed_size}_' \
-			f'hidden-{self.hidden_size}_dropout-{self.dropout_rate}'
+			f'hidden-{self.hidden_size}_dropout-{self.dropout_rate}_{fine_tune_flag}'
 
 	def _get_pretrained_model(self, in_chan):
 		model = timm.models.vit_tiny_patch16_384(pretrained=self.pretrained, in_chans=in_chan)

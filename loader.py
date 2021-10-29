@@ -215,6 +215,32 @@ class PawPreprocessor(object):
 
 		return image_paths, dense, targets
 
+	def get_dataset(
+			self, fold=0, for_validation=False, transform=None) -> Dataset:
+		image_paths, dense, targets = self.get_data(fold=fold, for_validation=for_validation)
+		dataset = PawDataset(
+			images_filepaths=image_paths,
+			dense_features=dense,
+			targets=targets,
+			transform=transform  # without augmentation, serious overfitting
+		)
+		return dataset
+
+	def get_dataloader(
+			self, fold=0, for_validation=False,
+			transform=None, batch_size=1) -> DataLoader:
+		dataset = self.get_dataset(fold=fold, for_validation=for_validation, transform=transform)
+		shuffle = False if not self.train or for_validation else True
+		dataloader = DataLoader(
+			dataset=dataset,
+			batch_size=batch_size,
+			num_workers=0,
+			shuffle=shuffle,
+			pin_memory=False
+		)
+
+		return dataloader
+
 
 class PawDataset(Dataset):
 
