@@ -220,7 +220,7 @@ class PawSwinEfficientNetB6(PawVisionTransformerTiny16Patch384):
 
 	def _customise_the_final_layer(self):
 		n_features = self.model.classifier.in_features
-		self.model.head = nn.Linear(n_features, self.embed_size)
+		self.model.classifier = nn.Linear(n_features, self.embed_size)
 		return
 
 	def _set_gradient(self):
