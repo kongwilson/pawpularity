@@ -166,9 +166,10 @@ class PawImageDatasetPreloaded(Dataset):
 
 class PawPreprocessor(object):
 
-	def __init__(self, root_dir: str, train: bool, n_folds=5, model_dir=None):
+	def __init__(self, root_dir: str, train: bool, n_folds=5, model_dir=None, debug=False):
 		self.train = train
 		self.n_folds = n_folds
+		self.debug = debug
 
 		if self.train:
 			path = os.path.join(root_dir, 'train.csv')
@@ -208,6 +209,9 @@ class PawPreprocessor(object):
 				data = self.df[self.df['kfold'] == fold]  # WKNOTE: making copy make lead to CUDA out of memory..
 			else:
 				data = self.df[self.df['kfold'] != fold]
+
+		if self.debug:
+			data = data.iloc[:64]
 
 		image_paths = data['image_path'].values
 		dense = data[self.features].values

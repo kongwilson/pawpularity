@@ -385,7 +385,7 @@ if __name__ == '__main__':
 	)
 
 	learner = Learner(
-		data_root=data_root, model_root=model_root, model_type=PawSwinTransformerLarge4Patch12Win22k384,
+		data_root=data_root, model_root=model_root, model_type=PawSwinEfficientNetB6,
 		fine_tune=True, **learning_params
 	)
 	learner.perform_training(resume=True)
