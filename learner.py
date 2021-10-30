@@ -162,7 +162,7 @@ class Learner(object):
 		return new_x, y * 100, preds
 
 	def perform_training(self, resume=False):
-		preprocessor = PawPreprocessor(root_dir=data_root, train=True, n_folds=self.n_folds, model_dir=model_root)
+		preprocessor = PawPreprocessor(root_dir=data_root, train=True, n_folds=self.n_folds, model_dir=model_root, debug=True)
 		for fold in range(self.n_folds):
 
 			train_loader = preprocessor.get_dataloader(
@@ -392,8 +392,10 @@ if __name__ == '__main__':
 	)
 
 	learner = Learner(
-		data_root=data_root, model_root=model_root, model_type=PawSwinEfficientNetB6,
-		fine_tune=True, **learning_params
+		data_root=data_root, model_root=model_root, model_type=PawSwinTransformerLarge4Patch12Win22k384,
+		fine_tune=False, **learning_params
 	)
-	learner.perform_training(resume=True)
+	# learner.perform_training(resume=False)
+	learner.train_and_fine_tune_xgb_model()
+
 

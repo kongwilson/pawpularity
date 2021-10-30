@@ -20,8 +20,9 @@ def infer(model_type, img_size=384, batch_size=4, embed_size=128, hidden_size=64
 		targets=test_targets,
 		transform=get_albumentation_transform_for_validation(img_size)
 	)
+	model = model_type(3, len(preprocessor.features), embed_size, hidden_size, pretrained=False)
 
-	all_models_checkpoints = glob.glob(model_root + os.path.sep + f'{model_type.__name__}_*.pth.tar')
+	all_models_checkpoints = glob.glob(model_root + os.path.sep + f'{str(model)}_*.pth.tar')
 	preds = None
 	for model_path in all_models_checkpoints:
 
@@ -70,8 +71,8 @@ def infer_with_xgb(model_type, img_size=384, batch_size=4, embed_size=128, hidde
 		targets=test_targets,
 		transform=get_albumentation_transform_for_validation(img_size)
 	)
-
-	all_models_checkpoints = glob.glob(model_root + os.path.sep + f'{model_type.__name__}_*.pth.tar')
+	model = model_type(3, len(preprocessor.features), embed_size, hidden_size, pretrained=False)
+	all_models_checkpoints = glob.glob(model_root + os.path.sep + f'{str(model)}_*.pth.tar')
 	preds = None
 	for model_path in all_models_checkpoints:
 
@@ -123,8 +124,9 @@ def infer_out_of_fold(model_type, img_size=384, batch_size=4, embed_size=128, hi
 		targets=valid_targets,
 		transform=get_albumentation_transform_for_validation(img_size)
 	)
+	model = model_type(3, len(preprocessor.features), embed_size, hidden_size, pretrained=False)
 
-	all_models_checkpoints = glob.glob(model_root + os.path.sep + f'{model_type.__name__}_*.pth.tar')
+	all_models_checkpoints = glob.glob(model_root + os.path.sep + f'{str(model)}_*.pth.tar')
 	preds = None
 	for model_path in all_models_checkpoints:
 
