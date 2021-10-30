@@ -136,8 +136,7 @@ class PawVisionTransformerTiny16Patch384(nn.Module):
 		self.hidden_size = hidden_size
 		self.dropout_rate = dropout
 		self.model = self._get_pretrained_model(in_chan)
-		n_features = self.model.head.in_features
-		self.model.head = nn.Linear(n_features, embed_size)
+		self._customise_the_final_layer()
 		self.fc = nn.Sequential(
 			nn.Linear(embed_size + dense_feature_size, hidden_size),
 			nn.ReLU(),
@@ -154,6 +153,11 @@ class PawVisionTransformerTiny16Patch384(nn.Module):
 	def _get_pretrained_model(self, in_chan):
 		model = timm.models.vit_tiny_patch16_384(pretrained=self.pretrained, in_chans=in_chan)
 		return model
+
+	def _customise_the_final_layer(self):
+		n_features = self.model.head.in_features
+		self.model.head = nn.Linear(n_features, self.embed_size)
+		return
 
 	def forward(self, image, dense):
 
@@ -199,3 +203,20 @@ class PawSwinTransformerLarge4Patch12Win384(PawVisionTransformerTiny16Patch384):
 
 	def _get_pretrained_model(self, in_chan):
 		return timm.models.swin_large_patch4_window12_384(pretrained=self.pretrained, in_chans=in_chan)
+
+
+class PawSwinEfficientNetB6(PawVisionTransformerTiny16Patch384):
+
+	def __init__(self, *args, **kwargs):
+
+		super().__init__(*args, **kwargs)
+
+	def _get_pretrained_model(self, in_chan):
+		return timm.models.efficientnet_b6(pretrained=self.pretrained, in_chans=in_chan)
+
+	def _customise_the_final_layer(self):
+		n_features = self.model.classifier.in_features
+		self.model.head = nn.Linear(n_features, self.embed_size)
+		return
+
+
