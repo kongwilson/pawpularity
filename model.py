@@ -161,18 +161,22 @@ class PawVisionTransformerTiny16Patch384(nn.Module):
 
 	def forward(self, image, dense):
 
-		if self.fine_tune:
-			for name, param in self.model.named_parameters():
-				if 'head.weight' in name or 'head.bias' in name:
-					param.requires_grad = True
-				else:
-					param.requires_grad = False
+		self._set_gradient()
 
 		embeddings = self.model(image)
 		x = self.dropout(embeddings)
 		x = torch.cat([x, dense], dim=1)
 		output = self.fc(x)
 		return output
+
+	def _set_gradient(self):
+		if self.fine_tune:
+			for name, param in self.model.named_parameters():
+				if 'head.weight' in name or 'head.bias' in name:
+					param.requires_grad = True
+				else:
+					param.requires_grad = False
+		return
 
 
 class PawVisionTransformerLarge32Patch384(PawVisionTransformerTiny16Patch384):
@@ -217,6 +221,15 @@ class PawSwinEfficientNetB6(PawVisionTransformerTiny16Patch384):
 	def _customise_the_final_layer(self):
 		n_features = self.model.classifier.in_features
 		self.model.head = nn.Linear(n_features, self.embed_size)
+		return
+
+	def _set_gradient(self):
+		if self.fine_tune:
+			for name, param in self.model.named_parameters():
+				if 'classifier.weight' in name or 'classifier.bias' in name:
+					param.requires_grad = True
+				else:
+					param.requires_grad = False
 		return
 
 
