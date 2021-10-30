@@ -104,6 +104,8 @@ class Learner(object):
 
 	def validate(self, val_loader, model, loss_func, epoch):
 		metric_monitor = MetricMonitor()
+		# WKNOTE: is a kind of switch for some specific layers/parts of the model that behave differently during
+		#   training and inference (evaluating) time, e.g. Dropouts Layers, BatchNorm Layers, etc.
 		model.eval()
 		stream = tqdm(val_loader)
 		final_targets = []
@@ -164,9 +166,13 @@ class Learner(object):
 		for fold in range(self.n_folds):
 
 			train_loader = preprocessor.get_dataloader(
-				fold=fold, for_validation=False, transform=get_albumentation_transform_for_training(self.img_size))
+				fold=fold, for_validation=False, transform=get_albumentation_transform_for_training(self.img_size),
+				batch_size=self.batch_size
+			)
 			val_loader = preprocessor.get_dataloader(
-				fold=fold, for_validation=True, transform=get_albumentation_transform_for_validation(self.img_size))
+				fold=fold, for_validation=True, transform=get_albumentation_transform_for_validation(self.img_size),
+				batch_size=self.batch_size
+			)
 
 			# model = PawClassifier(img_size, img_size, 3, len(preprocessor.features), embed_size, hidden_size)
 			model = self.model_type(
@@ -222,7 +228,8 @@ class Learner(object):
 						fine_tune_with_no_augmentation = True
 						train_loader = preprocessor.get_dataloader(
 							fold=fold, for_validation=False,
-							transform=get_albumentation_transform_for_validation(self.img_size))
+							transform=get_albumentation_transform_for_validation(self.img_size),
+							batch_size=self.batch_size)
 
 				self.train_one_epoch(train_loader, model, loss_func, optimizer, epoch, scheduler)
 
@@ -353,7 +360,7 @@ class Learner(object):
 				model_root, f"XGB-{rmse_val:.5f}_{model_name}.json")
 			xgb_model.save_model(model_path)
 
-			test_loader = test_preprocessor.get_dataloader()
+			test_loader = test_preprocessor.get_dataloader(batch_size=self.batch_size)
 
 			xgb_test_x, xgb_test_y, test_preds = self.extract_intermediate_outputs_and_targets(model, test_loader)
 			xgb_test_preds = xgb_model.predict(xgb_test_x)

@@ -216,6 +216,9 @@ class PawSwinEfficientNetB6(PawVisionTransformerTiny16Patch384):
 		super().__init__(*args, **kwargs)
 
 	def _get_pretrained_model(self, in_chan):
+		# WKNOTE: efficientNet uses a lot of batch normalisation layers - multiple publications have shown BN
+		#   performance degrade for batch_size under 32, and severely for <=8. In a nutshell, batch statistics
+		#   "averaged" over a single sample vary greatly sample-to-sample (high variance)
 		return timm.models.efficientnet_b6(pretrained=self.pretrained, in_chans=in_chan)
 
 	def _customise_the_final_layer(self):
