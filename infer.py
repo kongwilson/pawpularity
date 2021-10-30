@@ -27,7 +27,8 @@ def infer(model_type, img_size=384, batch_size=4, embed_size=128, hidden_size=64
 	for model_path in all_models_checkpoints:
 
 		model = model_type(3, len(preprocessor.features), embed_size, hidden_size, pretrained=False)
-		model.load_state_dict(torch.load(model_path))
+		# WKNOTE: map_location can specify the device to load your model, if your model is trained on other GPU, th
+		model.load_state_dict(torch.load(model_path, map_location='cuda:0'))
 		model = model.to(device)
 		model.eval()
 
