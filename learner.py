@@ -26,7 +26,7 @@ class Learner(object):
 	def __init__(
 			self,
 			data_root=None, model_root=None,
-			model_type=PawSwinTransformerLarge4Patch12Win22k384, patience=3, fine_tune=False,
+			model_type=PawSwinTransformerLarge4Patch12Win22k384, patience=3, pretrained=True, fine_tune=False,
 			img_size=384,
 			n_folds=10,
 			batch_size=1,
@@ -55,6 +55,7 @@ class Learner(object):
 
 		self.model_type = model_type
 		self.patience = patience
+		self.pretrained = pretrained
 		self.fine_tune = fine_tune
 		self.device = get_default_device()
 
@@ -177,7 +178,7 @@ class Learner(object):
 			# model = PawClassifier(img_size, img_size, 3, len(preprocessor.features), embed_size, hidden_size)
 			model = self.model_type(
 				3, len(preprocessor.features), self.embed_size, self.hidden_size,
-				pretrained=True, fine_tune=self.fine_tune)
+				pretrained=self.pretrained, fine_tune=self.fine_tune)
 
 			epoch_start = 1
 
@@ -287,7 +288,7 @@ class Learner(object):
 		test_preprocessor = PawPreprocessor(root_dir=self.data_root, train=False)
 
 		preds = None
-		model = self.model_type(3, len(preprocessor.features), self.embed_size, self.hidden_size)
+		model = self.model_type(3, len(preprocessor.features), self.embed_size, self.hidden_size, pretrained=False)
 		all_models_checkpoints = glob.glob(model_root + os.path.sep + f'{str(model)}_*.pth.tar')
 
 		for model_path in all_models_checkpoints:
@@ -301,7 +302,7 @@ class Learner(object):
 				fold=fold, for_validation=True,
 				transform=get_albumentation_transform_for_validation(self.img_size), batch_size=self.batch_size)
 
-			model = self.model_type(3, len(preprocessor.features), self.embed_size, self.hidden_size)
+			model = self.model_type(3, len(preprocessor.features), self.embed_size, self.hidden_size, pretrained=False)
 			# WKNOTE: get activation from an intermediate layer
 			model.model.head.register_forward_hook(self.get_activate_for_model_hook('swin_head'))
 			model.load_state_dict(torch.load(model_path))
@@ -382,6 +383,9 @@ if __name__ == '__main__':
 		n_folds=10,
 		batch_size=1,
 		patience=3,
+		model_type=PawSwinTransformerLarge4Patch12Win22k384,
+		pretrained=True,
+		fine_tune=False,
 		epochs=99,
 		embed_size=128,
 		hidden_size=64,
@@ -392,8 +396,7 @@ if __name__ == '__main__':
 	)
 
 	learner = Learner(
-		data_root=data_root, model_root=model_root, model_type=PawSwinTransformerLarge4Patch12Win22k384,
-		fine_tune=False, **learning_params
+		data_root=data_root, model_root=model_root, **learning_params
 	)
 	learner.perform_training(resume=False)
 	learner.train_and_fine_tune_xgb_model()
