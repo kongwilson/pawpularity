@@ -131,6 +131,8 @@ class PawVisionTransformerTiny16Patch384(nn.Module):
 		super().__init__()
 		self.pretrained = pretrained
 		self.fine_tune = fine_tune
+		if pretrained is False:
+			self.fine_tune = False  # we can't fine tune the model if the backbone is not pretrained!!
 		self.dense_feature_size = dense_feature_size
 		self.embed_size = embed_size
 		self.hidden_size = hidden_size
@@ -145,10 +147,18 @@ class PawVisionTransformerTiny16Patch384(nn.Module):
 		self.dropout = nn.Dropout(dropout)
 
 	def __str__(self):
-		fine_tune_flag = 'fine-tuned' if self.fine_tune else 'retrained'
-		return \
-			f'{type(self).__name__}_embed-{self.embed_size}_' \
-			f'hidden-{self.hidden_size}_drop-{self.dropout_rate}_{fine_tune_flag}'
+		if self.pretrained:
+			fine_tune_flag = 'fine-tuned' if self.fine_tune else 'retrained'
+		else:
+			fine_tune_flag = 'fresh'
+		name_parts = [
+			type(self).__name__,
+			f'embed-{self.embed_size}',
+			f'hidden-{self.hidden_size}',
+			f'drop-{self.dropout_rate}',
+			fine_tune_flag
+		]
+		return '_'.join(name_parts)
 
 	def _get_pretrained_model(self, in_chan):
 		model = timm.models.vit_tiny_patch16_384(pretrained=self.pretrained, in_chans=in_chan)
