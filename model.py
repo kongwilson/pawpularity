@@ -246,3 +246,26 @@ class PawSwinEfficientNetB6(PawVisionTransformerTiny16Patch384):
 		return
 
 
+class PawNFNetF3(PawVisionTransformerTiny16Patch384):
+
+	def __init__(self, *args, **kwargs):
+
+		super().__init__(*args, **kwargs)
+
+	def _get_pretrained_model(self, in_chan):
+		return timm.models.nfnet_f3(pretrained=self.pretrained, in_chans=in_chan)
+
+	def _customise_the_final_layer(self):
+		n_features = self.model.head.fc.in_features
+		self.model.head.fc = nn.Linear(n_features, self.embed_size)
+		return
+
+	def _set_gradient(self):
+		if self.fine_tune:
+			for name, param in self.model.named_parameters():
+				if 'head.fc.weight' in name or 'head.fc.bias' in name:
+					param.requires_grad = True
+				else:
+					param.requires_grad = False
+		return
+
