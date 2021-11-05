@@ -147,10 +147,7 @@ class PawVisionTransformerTiny16Patch384(nn.Module):
 		self.dropout = nn.Dropout(dropout)
 
 	def __str__(self):
-		if self.pretrained:
-			fine_tune_flag = 'fine-tuned' if self.fine_tune else 'retrained'
-		else:
-			fine_tune_flag = 'fresh'
+		fine_tune_flag = 'fine-tuned' if self.fine_tune else 'retrained'
 		name_parts = [
 			type(self).__name__,
 			f'embed-{self.embed_size}',

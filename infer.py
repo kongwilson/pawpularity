@@ -51,19 +51,19 @@ def extract_intermediate_outputs_and_targets(model, data_loader):
 	return new_x, y * 100, preds
 
 
-def infer(model_type, img_size=384, batch_size=4, embed_size=128, hidden_size=64):
+def infer(model_type, img_size=384, batch_size=4, embed_size=128, hidden_size=64, fine_tune=False):
 
 	seed_everything()
 	device = get_default_device()
 	preprocessor = PawPreprocessor(root_dir=data_root, train=False)
 	test_loader = preprocessor.get_dataloader()
-	model = model_type(3, len(preprocessor.features), embed_size, hidden_size, pretrained=False)
+	model = model_type(3, len(preprocessor.features), embed_size, hidden_size, pretrained=False, fine_tune=fine_tune)
 
 	all_models_checkpoints = get_all_model_checkpoints(model)
 	preds = None
 	for model_path in all_models_checkpoints:
 
-		model = model_type(3, len(preprocessor.features), embed_size, hidden_size, pretrained=False)
+		model = model_type(3, len(preprocessor.features), embed_size, hidden_size, pretrained=False, fine_tune=fine_tune)
 		# WKNOTE: map_location can specify the device to load your model, if your model is trained on other GPU, th
 		model.load_state_dict(torch.load(model_path, map_location='cuda:0'))
 		model = model.to(device)
@@ -180,8 +180,9 @@ if __name__ == '__main__':
 	# preds = infer(PawVisionTransformerLarge32Patch384)
 	# print(preds)
 	# preds = infer_out_of_fold(PawVisionTransformerLarge32Patch384)
-	preds1 = infer_with_xgb(PawSwinTransformerLarge4Patch12Win384)
-	preds2 = infer_with_xgb(PawSwinTransformerLarge4Patch12Win22k384)
-
-	preds = (preds1 + preds2) / 2
-	print(preds)
+	# preds1 = infer_with_xgb(PawSwinTransformerLarge4Patch12Win384)
+	# preds2 = infer_with_xgb(PawSwinTransformerLarge4Patch12Win22k384)
+	#
+	# preds = (preds1 + preds2) / 2
+	# print(preds)
+	preds = infer(PawSwinTransformerLarge4Patch12Win22k384, fine_tune=True)
