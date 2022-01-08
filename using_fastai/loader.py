@@ -11,6 +11,7 @@ from fastai.vision.all import F, Learner, BCEWithLogitsLossFlat
 from fastai.vision.all import SaveModelCallback, EarlyStoppingCallback
 from fastai.vision.all import *
 import gc
+import os
 
 from sklearn.model_selection import StratifiedKFold
 import math
@@ -30,7 +31,7 @@ def get_data(data, fold):
 		valid_col='is_valid',
 		seed=RANDOM_SEED,
 		fn_col='path',
-		folder=os.path.join(data_root, 'train'),
+		folder=os.path.join(data_root),
 		label_col='norm_score',
 		y_block=RegressionBlock,
 		bs=8,
@@ -55,7 +56,7 @@ def petfinder_rmse(input, target):
 
 if __name__ == '__main__':
 	train_df = pd.read_csv(os.path.join(data_root, 'train.csv'))
-	train_df['path'] = train_df['Id'].apply(lambda x: f'{x}.jpg')
+	train_df['path'] = train_df['Id'].apply(lambda x: os.path.join('train', f'{x}.jpg'))
 	train_df = train_df.drop(columns=['Id'])
 	train_df = train_df.sample(frac=1).reset_index(drop=True)  # shuffle dataframe
 	train_df['norm_score'] = train_df['Pawpularity'] / 100
@@ -82,11 +83,15 @@ if __name__ == '__main__':
 		print(f'Fold {i} results')
 
 		learn = get_learner(train_df, fold=i)
-		lr = learn.lr_find(end_lr=3e-2).valley
-		print(f'fold {i} learning rate round is {lr}')
+		lr_find = learn.lr_find(end_lr=3e-2)
+		lr = lr_find.valley
+		print(f'fold {i} learning rate found is {lr}')
 
-		learn.fit_one_cycle(20, lr, cbs=[SaveModelCallback(),
-			EarlyStoppingCallback(monitor='petfinder_rmse', comp=np.less, patience=2)])
+		learn.fit_one_cycle(
+			20, lr, cbs=[
+				SaveModelCallback(fname=f'swin_large_patch4_window7_224_in22k-fold_{i}'),
+				EarlyStoppingCallback(monitor='petfinder_rmse', comp=np.less, patience=2)
+			])
 
 		learn.recorder.plot_loss()
 
