@@ -73,7 +73,7 @@ if __name__ == '__main__':
 
 	test_df = pd.read_csv(os.path.join(data_root, 'test.csv'))
 	test_df['Pawpularity'] = [1]*len(test_df)
-	test_df['path'] = test_df['Id'].apply(lambda x: f'{x}.jpg')
+	test_df['path'] = test_df['Id'].apply(lambda x: os.path.join('test', f'{x}.jpg'))
 	test_df = test_df.drop(columns=['Id'])
 
 	all_preds = []
