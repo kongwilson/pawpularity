@@ -206,18 +206,50 @@ class PawSwinTransformerLarge4Patch12Win22k384(PawVisionTransformerTiny16Patch38
 		return timm.models.swin_large_patch4_window12_384_in22k(pretrained=self.pretrained, in_chans=in_chan)
 
 
-class PawSwinTransformerLarge4Patch7Win22k224(PawVisionTransformerTiny16Patch384):
+class PawSwinTransformerLarge4Patch7Win22k224(nn.Module):
 
-	def __init__(self, *args, **kwargs):
+	def __init__(
+			self, in_chan, dense_feature_size, embed_size, hidden_size, dropout=0.2,
+			pretrained=True, fine_tune=False):
 
-		super().__init__(*args, **kwargs)
+		super().__init__()
+		self.pretrained = pretrained
+		self.fine_tune = fine_tune
+		if pretrained is False:
+			self.fine_tune = False  # we can't fine tune the model if the backbone is not pretrained!!
+		self.dense_feature_size = dense_feature_size
+		self.embed_size = embed_size
+		self.hidden_size = hidden_size
+		self.dropout_rate = dropout
+		self.model = self._get_pretrained_model(in_chan)
+
+	def __str__(self):
+		fine_tune_flag = 'fine-tuned' if self.fine_tune else 'retrained'
+		name_parts = [
+			type(self).__name__,
+			fine_tune_flag
+		]
+		return '_'.join(name_parts)
 
 	def _get_pretrained_model(self, in_chan):
 		return timm.models.swin_large_patch4_window7_224_in22k(
 			pretrained=self.pretrained, in_chans=in_chan, num_classes=1)
 
-	def _customise_the_final_layer(self):
-		pass
+	def forward(self, image):
+
+		self._set_gradient()
+
+		output = self.model(image)
+		return output
+
+	def _set_gradient(self):
+		if self.fine_tune:
+			for name, param in self.model.named_parameters():
+				if 'head.weight' in name or 'head.bias' in name:
+					param.requires_grad = True
+				else:
+					param.requires_grad = False
+		return
 
 
 class PawSwinTransformerLarge4Patch12Win384(PawVisionTransformerTiny16Patch384):

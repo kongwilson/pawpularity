@@ -383,11 +383,11 @@ class Learner(object):
 
 if __name__ == '__main__':
 	learning_params = dict(
-		img_size=384,
+		img_size=224,
 		n_folds=10,
-		batch_size=1,
+		batch_size=4,
 		patience=3,
-		model_type=PawSwinTransformerLarge4Patch12Win22k384,
+		model_type=PawSwinTransformerLarge4Patch7Win22k224,
 		pretrained=True,
 		fine_tune=True,
 		epochs=99,
