@@ -3,6 +3,7 @@ DESCRIPTION
 
 Copyright (C) Weicong Kong, 8/01/2022
 """
+import numpy as np
 import timm
 from timm import create_model
 from fastai.vision.all import set_seed, ImageDataLoaders
@@ -46,8 +47,8 @@ def get_learner(data, fold):
 
 	dls = get_data(data, fold)
 	model = timm.models.swin_large_patch4_window7_224_in22k(pretrained=True, num_classes=dls.c)
-	learn = Learner(dls, model, loss_func=BCEWithLogitsLossFlat(), metrics=petfinder_rmse).to_fp16()
-	return learn
+	learner = Learner(dls, model, loss_func=BCEWithLogitsLossFlat(), metrics=petfinder_rmse).to_fp16()
+	return learner
 
 
 def petfinder_rmse(input, target):
@@ -89,7 +90,8 @@ if __name__ == '__main__':
 
 		learn.fit_one_cycle(
 			10, lr, cbs=[
-				SaveModelCallback(monitor='petfinder_rmse', fname=f'swin_large_patch4_window7_224_in22k-fold{i}'),
+				SaveModelCallback(
+					monitor='petfinder_rmse', fname=f'swin_large_patch4_window7_224_in22k-fold{i}', comp=np.less),
 				EarlyStoppingCallback(monitor='petfinder_rmse', min_delta=0.1, comp=np.less, patience=5)
 			])
 
