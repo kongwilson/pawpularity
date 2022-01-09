@@ -86,7 +86,8 @@ class Learner(object):
 				dense = dense.to(self.device, non_blocking=True)
 				target = target.to(self.device, non_blocking=True).float().view(-1, 1)
 
-				output = model(images, dense)
+				# output = model(images, dense)
+				output = model(images)  # TODO: should control whether the model with image only or not
 
 				loss = loss_func(output, target)
 
@@ -117,7 +118,8 @@ class Learner(object):
 				images = images.to(self.device, non_blocking=True)
 				dense = dense.to(self.device, non_blocking=True)
 				target = target.to(self.device, non_blocking=True).float().view(-1, 1)
-				output = model(images, dense)
+				# output = model(images, dense)
+				output = model(images)  # TODO: should control whether the model with image only or not
 				loss = loss_func(output, target)
 				metric_monitor.update('Loss', loss.item())
 				metric_monitor.update('RMSE', rmse_from_classifier_output(output, target))
@@ -148,7 +150,8 @@ class Learner(object):
 			for (images, dense, target) in tqdm(data_loader, desc=f'Training with XGB. '):
 				images = images.to(device, non_blocking=True)
 				dense = dense.to(device, non_blocking=True)
-				batch_preds = torch.sigmoid(model(images, dense)).detach().cpu().numpy() * 100
+				# batch_preds = torch.sigmoid(model(images, dense)).detach().cpu().numpy() * 100
+				batch_preds = torch.sigmoid(model(images)).detach().cpu().numpy() * 100
 				batch_embed = self.activation['swin_head']
 				batch_x = np.concatenate([batch_embed, dense.detach().cpu().numpy()], axis=1)
 				if preds is None:
