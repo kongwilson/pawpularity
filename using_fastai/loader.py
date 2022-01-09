@@ -47,9 +47,9 @@ def get_learner(data, fold, model_name='swin_large_patch4_window7_224_in22k'):
 
 	dls = get_data(data, fold)
 	if model_name == 'swin_large_patch4_window12_384_in22k':
-		model = timm.models.swin_large_patch4_window7_224_in22k(pretrained=True, num_classes=dls.c)
-	else:
 		model = timm.models.swin_large_patch4_window12_384_in22k(pretrained=True, num_classes=dls.c)
+	else:
+		model = timm.models.swin_large_patch4_window7_224_in22k(pretrained=True, num_classes=dls.c)
 	learner = Learner(dls, model, loss_func=BCEWithLogitsLossFlat(), metrics=petfinder_rmse).to_fp16()
 	return learner
 
