@@ -59,7 +59,7 @@ def petfinder_rmse(input, target):
 
 
 def get_model_checkpoint_name(name, fold):
-	return f'{name}-fold{i}'
+	return f'{name}-fold{fold}'
 
 
 if __name__ == '__main__':
