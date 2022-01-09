@@ -43,10 +43,13 @@ def get_data(data, fold):
 	return data_loaders
 
 
-def get_learner(data, fold):
+def get_learner(data, fold, model_name='swin_large_patch4_window7_224_in22k'):
 
 	dls = get_data(data, fold)
-	model = timm.models.swin_large_patch4_window7_224_in22k(pretrained=True, num_classes=dls.c)
+	if model_name == 'swin_large_patch4_window12_384_in22k':
+		model = timm.models.swin_large_patch4_window7_224_in22k(pretrained=True, num_classes=dls.c)
+	else:
+		model = timm.models.swin_large_patch4_window12_384_in22k(pretrained=True, num_classes=dls.c)
 	learner = Learner(dls, model, loss_func=BCEWithLogitsLossFlat(), metrics=petfinder_rmse).to_fp16()
 	return learner
 
@@ -55,7 +58,12 @@ def petfinder_rmse(input, target):
 	return 100 * torch.sqrt(F.mse_loss(F.sigmoid(input.flatten()), target))
 
 
+def get_model_checkpoint_name(name, fold):
+	return f'{name}-fold{i}'
+
+
 if __name__ == '__main__':
+	model_name = 'swin_large_patch4_window12_384_in22k'
 	train_df = pd.read_csv(os.path.join(data_root, 'train.csv'))
 	train_df['path'] = train_df['Id'].apply(lambda x: os.path.join('train', f'{x}.jpg'))
 	train_df = train_df.drop(columns=['Id'])
@@ -91,7 +99,7 @@ if __name__ == '__main__':
 		learn.fit_one_cycle(
 			20, lr, cbs=[
 				SaveModelCallback(
-					monitor='petfinder_rmse', fname=f'swin_large_patch4_window7_224_in22k-fold{i}', comp=np.less),
+					monitor='petfinder_rmse', fname=get_model_checkpoint_name(model_name, i), comp=np.less),
 				EarlyStoppingCallback(monitor='petfinder_rmse', min_delta=0.1, comp=np.less, patience=5)
 			])
 
