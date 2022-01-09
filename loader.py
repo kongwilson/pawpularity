@@ -166,10 +166,11 @@ class PawImageDatasetPreloaded(Dataset):
 
 class PawPreprocessor(object):
 
-	def __init__(self, root_dir: str, train: bool, n_folds=5, model_dir=None, debug=False):
+	def __init__(self, root_dir: str, train: bool, n_folds=5, model_dir=None, debug=False, image_size=384):
 		self.train = train
 		self.n_folds = n_folds
 		self.debug = debug
+		self.image_size = image_size
 
 		if self.train:
 			path = os.path.join(root_dir, 'train.csv')
@@ -226,7 +227,8 @@ class PawPreprocessor(object):
 			images_filepaths=image_paths,
 			dense_features=dense,
 			targets=targets,
-			transform=transform  # without augmentation, serious overfitting
+			transform=transform,  # without augmentation, serious overfitting,
+			image_size=self.image_size
 		)
 		return dataset
 
