@@ -3,6 +3,7 @@ DESCRIPTION
 
 Copyright (C) Weicong Kong, 10/01/2022
 """
+import pandas as pd
 
 from using_fastai.loader import *
 
@@ -39,6 +40,7 @@ if __name__ == '__main__':
 
 		learn = get_learner(train_df, fold=i, model_name=model_name)
 		learn.load(get_model_checkpoint_name(model_name, i))
+		val_metrics = learn.validate()  # compute the validation loss and metrics
 		# learn.export(f'model_fold_{i}.pkl')
 		# learn.save(f'model_fold_{i}.pkl')
 
@@ -55,3 +57,9 @@ if __name__ == '__main__':
 		torch.cuda.empty_cache()
 
 		gc.collect()
+
+	sub = pd.DataFrame()
+	sub['Id'] = test_df['Id']
+	preds = np.mean(np.stack(all_preds), axis=0)
+	sub['Pawpularity'] = preds * 100
+	# sub.to_csv('submission.csv', index=False)

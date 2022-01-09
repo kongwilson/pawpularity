@@ -96,14 +96,16 @@ if __name__ == '__main__':
 		lr = lr_find.valley
 		print(f'fold {i} learning rate found is {lr}')
 
+		checkpoint_filename = get_model_checkpoint_name(model_name, i)
 		learn.fit_one_cycle(
 			20, lr, cbs=[
 				SaveModelCallback(
-					monitor='petfinder_rmse', fname=get_model_checkpoint_name(model_name, i), comp=np.less),
+					monitor='petfinder_rmse', fname=checkpoint_filename, comp=np.less),
 				EarlyStoppingCallback(monitor='petfinder_rmse', min_delta=0.1, comp=np.less, patience=5)
 			])
 
-		learn.recorder.plot_loss()
+		learn.load(checkpoint_filename)
+		val_metrics = learn.validate()  # compute the validation loss and metrics
 
 		# learn = learn.to_fp32()
 
