@@ -8,7 +8,7 @@ from using_fastai.loader import *
 
 
 if __name__ == '__main__':
-	model_name = 'swin_large_patch4_window12_384_in22k'
+	model_name = 'swin_large_patch4_window7_224_in22k'
 
 	train_df = pd.read_csv(os.path.join(data_root, 'train.csv'))
 	train_df['path'] = train_df['Id'].apply(lambda x: os.path.join('train', f'{x}.jpg'))
@@ -37,7 +37,7 @@ if __name__ == '__main__':
 
 		print(f'Fold {i} results')
 
-		learn = get_learner(train_df, fold=i)
+		learn = get_learner(train_df, fold=i, model_name=model_name)
 		learn.load(get_model_checkpoint_name(model_name, i))
 		# learn.export(f'model_fold_{i}.pkl')
 		# learn.save(f'model_fold_{i}.pkl')
