@@ -205,18 +205,17 @@ class Learner(object):
 			model.to(self.device)
 			loss_func = nn.BCEWithLogitsLoss()
 			optimizer = torch.optim.AdamW(model.parameters(), lr=self.lr, weight_decay=self.weight_decay)
-			# scheduler = OneCycleLR(
-			#     optimizer,
-			#     max_lr=max_lr,
-			#     steps_per_epoch=int(len(train_dataset) / batch_size) + 1,
-			#     epochs=epochs,
-			# )
-			scheduler = CosineAnnealingWarmRestarts(
+			scheduler = OneCycleLR(
 				optimizer,
-				T_0=100,
-				eta_min=self.min_lr,
-				last_epoch=-1
+				max_lr=3e-2,
+				epochs=self.epochs,
 			)
+			# scheduler = CosineAnnealingWarmRestarts(
+			# 	optimizer,
+			# 	T_0=100,
+			# 	eta_min=self.min_lr,
+			# 	last_epoch=-1
+			# )
 
 			epochs_with_no_improvement = 0
 			fine_tune_with_no_augmentation = False
