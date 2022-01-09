@@ -207,8 +207,8 @@ class Learner(object):
 			optimizer = torch.optim.AdamW(model.parameters(), lr=self.lr, weight_decay=self.weight_decay)
 			scheduler = OneCycleLR(
 				optimizer,
-				max_lr=3e-2,
-				steps_per_epoch=int(len(train_loader) / self.batch_size) + 1,
+				max_lr=3e-4,
+				steps_per_epoch=len(train_loader),
 				epochs=self.epochs,
 			)
 			# scheduler = CosineAnnealingWarmRestarts(
@@ -395,7 +395,7 @@ if __name__ == '__main__':
 		model_type=PawSwinTransformerLarge4Patch7Win22k224,
 		pretrained=True,
 		fine_tune=True,
-		epochs=99,
+		epochs=20,
 		embed_size=128,
 		hidden_size=64,
 		lr=1e-5,
