@@ -95,12 +95,15 @@ class PawImageDatasetPreloaded(Dataset):
 
 		# set the number of folds
 		if train:
-			skf = StratifiedKFold(self.num_folds)
-			self.kfolds = list(skf.split(self.df.index, self.df['Pawpularity'].values))
+			num_bins = int(np.ceil(2 * ((len(self.df)) ** (1. / 3))))
+			self.df['bins'] = pd.cut(
+				self.df['Pawpularity'], bins=num_bins, labels=False)  # WK: use 'bins' to do stratified kfold
+			skf = StratifiedKFold(self.num_folds, random_state=RANDOM_SEED, shuffle=True)
+			self.kfolds = list(skf.split(self.df.index, self.df['bins'].values))
 		else:
 			self.kfolds = None
 
-		not_features = ['Id', 'kfold', 'image_path', 'Pawpularity']
+		not_features = ['Id', 'kfold', 'image_path', 'Pawpularity', 'bins']
 		self.features = [feat for feat in self.df.columns if feat not in not_features]
 
 		# prepare the target (label)
