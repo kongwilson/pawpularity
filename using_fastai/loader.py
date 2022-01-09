@@ -24,9 +24,13 @@ from utilities import *
 set_seed(RANDOM_SEED, reproducible=True)
 
 
-def get_data(data, fold):
+def get_data(data, fold, timm_model_name='swin_large_patch4_window7_224_in22k'):
 	data_fold = data.copy()
 	data_fold['is_valid'] = data['fold'] == fold
+	if timm_model_name == 'swin_large_patch4_window7_224_in22k':
+		img_size = 224
+	else:
+		img_size = 384
 
 	# WK: ImageDataLoaders.from_df returns fastai.data.core.DataLoaders
 	data_loaders = ImageDataLoaders.from_df(
@@ -39,16 +43,16 @@ def get_data(data, fold):
 		y_block=RegressionBlock,
 		bs=16,
 		num_workers=0,
-		item_tfms=Resize(224),
+		item_tfms=Resize(img_size),
 		batch_tfms=setup_aug_tfms([Brightness(), Contrast(), Hue(), Saturation(), FlipItem()])
 	)
 	return data_loaders
 
 
-def get_learner(data, fold, model_name='swin_large_patch4_window7_224_in22k'):
+def get_learner(data, fold, timm_model_name='swin_large_patch4_window7_224_in22k'):
 
-	dls = get_data(data, fold)
-	if model_name == 'swin_large_patch4_window12_384_in22k':
+	dls = get_data(data, fold, timm_model_name=timm_model_name)
+	if timm_model_name == 'swin_large_patch4_window12_384_in22k':
 		model = timm.models.swin_large_patch4_window12_384_in22k(pretrained=True, num_classes=dls.c)
 	else:
 		model = timm.models.swin_large_patch4_window7_224_in22k(pretrained=True, num_classes=dls.c)
@@ -60,8 +64,8 @@ def petfinder_rmse(input, target):
 	return 100 * torch.sqrt(F.mse_loss(F.sigmoid(input.flatten()), target))
 
 
-def get_model_checkpoint_name(name, fold):
-	return f'{name}-fold{fold}'
+def get_model_checkpoint_name(timm_model_name, fold):
+	return f'{timm_model_name}-fold{fold}'
 
 
 def save_best_score(score_df: pd.DataFrame):
@@ -73,10 +77,8 @@ def save_best_score(score_df: pd.DataFrame):
 	best_scores.to_csv('best_score.csv', index=False)
 
 
-
-
 if __name__ == '__main__':
-	model_name = 'swin_large_patch4_window7_224_in22k'
+	model_name = 'swin_large_patch4_window12_384_in22k'
 	train_df = pd.read_csv(os.path.join(data_root, 'train.csv'))
 	train_df['path'] = train_df['Id'].apply(lambda x: os.path.join('train', f'{x}.jpg'))
 	train_df = train_df.drop(columns=['Id'])
@@ -103,7 +105,7 @@ if __name__ == '__main__':
 
 		print(f'Fold {i} results')
 
-		learn = get_learner(train_df, fold=i, model_name=model_name)
+		learn = get_learner(train_df, fold=i, timm_model_name=model_name)
 		lr_find = learn.lr_find(end_lr=3e-2)
 		lr = lr_find.valley
 		print(f'fold {i} learning rate found is {lr}')
@@ -127,7 +129,7 @@ if __name__ == '__main__':
 		# learn.export(f'model_fold_{i}.pkl')
 		# learn.save(f'model_fold_{i}.pkl')
 
-		dls = get_data(train_df, fold=i)
+		dls = get_data(train_df, fold=i, timm_model_name=model_name)
 
 		test_dl = dls.test_dl(test_df)
 

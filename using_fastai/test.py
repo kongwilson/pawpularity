@@ -37,7 +37,7 @@ if __name__ == '__main__':
 
 		print(f'Fold {i} results')
 
-		learn = get_learner(train_df, fold=i, model_name=model_name)
+		learn = get_learner(train_df, fold=i, timm_model_name=model_name)
 		learn.load(get_model_checkpoint_name(model_name, i))
 		val_metrics = learn.validate()  # compute the validation loss and metrics
 		# learn.export(f'model_fold_{i}.pkl')
