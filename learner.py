@@ -288,7 +288,9 @@ class Learner(object):
 		test_preprocessor = PawPreprocessor(root_dir=self.data_root, train=False)
 
 		preds = None
-		model = self.model_type(3, len(preprocessor.features), self.embed_size, self.hidden_size, pretrained=False)
+		model = self.model_type(
+			3, len(preprocessor.features), self.embed_size, self.hidden_size,
+			pretrained=self.pretrained, fine_tune=self.fine_tune)
 		all_models_checkpoints = glob.glob(model_root + os.path.sep + f'{str(model)}_*.pth.tar')
 
 		for model_path in all_models_checkpoints:
@@ -302,7 +304,9 @@ class Learner(object):
 				fold=fold, for_validation=True,
 				transform=get_albumentation_transform_for_validation(self.img_size), batch_size=self.batch_size)
 
-			model = self.model_type(3, len(preprocessor.features), self.embed_size, self.hidden_size, pretrained=False)
+			model = self.model_type(
+				3, len(preprocessor.features), self.embed_size, self.hidden_size, pretrained=self.pretrained,
+				fine_tune=self.fine_tune)
 			# WKNOTE: get activation from an intermediate layer
 			model.model.head.register_forward_hook(self.get_activate_for_model_hook('swin_head'))
 			model.load_state_dict(torch.load(model_path))
@@ -385,12 +389,12 @@ if __name__ == '__main__':
 		patience=3,
 		model_type=PawSwinTransformerLarge4Patch12Win22k384,
 		pretrained=True,
-		fine_tune=False,
+		fine_tune=True,
 		epochs=99,
 		embed_size=128,
 		hidden_size=64,
 		lr=1e-5,
-		max_lr=1e-3,
+		max_lr=3e-2,
 		min_lr=1e-7,
 		weight_decay=1e-6,
 	)
@@ -398,7 +402,7 @@ if __name__ == '__main__':
 	learner = Learner(
 		data_root=data_root, model_root=model_root, **learning_params
 	)
-	learner.perform_training(resume=False)
+	learner.perform_training(resume=True)
 	learner.train_and_fine_tune_xgb_model()
 
 

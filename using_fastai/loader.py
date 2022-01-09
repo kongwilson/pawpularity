@@ -35,7 +35,7 @@ def get_data(data, fold):
 		folder=os.path.join(data_root),
 		label_col='norm_score',
 		y_block=RegressionBlock,
-		bs=8,
+		bs=16,
 		num_workers=0,
 		item_tfms=Resize(224),
 		batch_tfms=setup_aug_tfms([Brightness(), Contrast(), Hue(), Saturation()])
@@ -89,7 +89,7 @@ if __name__ == '__main__':
 		print(f'fold {i} learning rate found is {lr}')
 
 		learn.fit_one_cycle(
-			10, lr, cbs=[
+			20, lr, cbs=[
 				SaveModelCallback(
 					monitor='petfinder_rmse', fname=f'swin_large_patch4_window7_224_in22k-fold{i}', comp=np.less),
 				EarlyStoppingCallback(monitor='petfinder_rmse', min_delta=0.1, comp=np.less, patience=5)
