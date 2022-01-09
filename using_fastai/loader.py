@@ -4,6 +4,7 @@ DESCRIPTION
 Copyright (C) Weicong Kong, 8/01/2022
 """
 import numpy as np
+import pandas as pd
 import timm
 from timm import create_model
 from fastai.vision.all import set_seed, ImageDataLoaders
@@ -13,6 +14,7 @@ from fastai.vision.all import SaveModelCallback, EarlyStoppingCallback
 from fastai.vision.all import *
 import gc
 import os
+import datetime
 
 from sklearn.model_selection import StratifiedKFold
 import math
@@ -38,7 +40,7 @@ def get_data(data, fold):
 		bs=16,
 		num_workers=0,
 		item_tfms=Resize(224),
-		batch_tfms=setup_aug_tfms([Brightness(), Contrast(), Hue(), Saturation()])
+		batch_tfms=setup_aug_tfms([Brightness(), Contrast(), Hue(), Saturation(), FlipItem()])
 	)
 	return data_loaders
 
@@ -62,6 +64,17 @@ def get_model_checkpoint_name(name, fold):
 	return f'{name}-fold{fold}'
 
 
+def save_best_score(score_df: pd.DataFrame):
+	if os.path.exists('best_score.csv'):
+		best_scores = pd.read_csv('best_score.csv')
+		best_scores = best_scores.append(score_df)
+	else:
+		best_scores = score_df
+	best_scores.to_csv('best_score.csv', index=False)
+
+
+
+
 if __name__ == '__main__':
 	model_name = 'swin_large_patch4_window7_224_in22k'
 	train_df = pd.read_csv(os.path.join(data_root, 'train.csv'))
@@ -83,7 +96,6 @@ if __name__ == '__main__':
 	test_df = pd.read_csv(os.path.join(data_root, 'test.csv'))
 	test_df['Pawpularity'] = [1]*len(test_df)
 	test_df['path'] = test_df['Id'].apply(lambda x: os.path.join('test', f'{x}.jpg'))
-	test_df = test_df.drop(columns=['Id'])
 
 	all_preds = []
 
@@ -106,7 +118,10 @@ if __name__ == '__main__':
 
 		learn.load(checkpoint_filename)
 		val_metrics = learn.validate()  # compute the validation loss and metrics
-
+		best_score = pd.DataFrame(
+			data=[[model_name, i] + val_metrics.items + [datetime.datetime.now()]],
+			columns=['model_name', 'fold', 'val_loss', 'petfinder_rmse', 'trained_time'])
+		save_best_score(best_score)
 		# learn = learn.to_fp32()
 
 		# learn.export(f'model_fold_{i}.pkl')

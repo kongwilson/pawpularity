@@ -30,7 +30,6 @@ if __name__ == '__main__':
 	test_df = pd.read_csv(os.path.join(data_root, 'test.csv'))
 	test_df['Pawpularity'] = [1]*len(test_df)
 	test_df['path'] = test_df['Id'].apply(lambda x: os.path.join('test', f'{x}.jpg'))
-	test_df = test_df.drop(columns=['Id'])
 
 	all_preds = []
 
@@ -62,4 +61,4 @@ if __name__ == '__main__':
 	sub['Id'] = test_df['Id']
 	preds = np.mean(np.stack(all_preds), axis=0)
 	sub['Pawpularity'] = preds * 100
-	# sub.to_csv('submission.csv', index=False)
+	sub.to_csv('submission.csv', index=False)
