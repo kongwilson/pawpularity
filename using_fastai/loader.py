@@ -88,9 +88,9 @@ if __name__ == '__main__':
 		print(f'fold {i} learning rate found is {lr}')
 
 		learn.fit_one_cycle(
-			20, lr, cbs=[
-				SaveModelCallback(fname=f'swin_large_patch4_window7_224_in22k-fold_{i}'),
-				EarlyStoppingCallback(monitor='petfinder_rmse', comp=np.less, patience=2)
+			10, lr, cbs=[
+				SaveModelCallback(monitor='petfinder_rmse', fname=f'swin_large_patch4_window7_224_in22k-fold{i}'),
+				EarlyStoppingCallback(monitor='petfinder_rmse', min_delta=0.1, comp=np.less, patience=5)
 			])
 
 		learn.recorder.plot_loss()
