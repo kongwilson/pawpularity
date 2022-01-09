@@ -208,6 +208,7 @@ class Learner(object):
 			scheduler = OneCycleLR(
 				optimizer,
 				max_lr=3e-2,
+				steps_per_epoch=int(len(train_loader) / self.batch_size) + 1,
 				epochs=self.epochs,
 			)
 			# scheduler = CosineAnnealingWarmRestarts(
