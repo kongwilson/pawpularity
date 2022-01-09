@@ -166,7 +166,8 @@ class Learner(object):
 		return new_x, y * 100, preds
 
 	def perform_training(self, resume=False):
-		preprocessor = PawPreprocessor(root_dir=data_root, train=True, n_folds=self.n_folds, model_dir=model_root)
+		preprocessor = PawPreprocessor(
+			root_dir=data_root, train=True, n_folds=self.n_folds, model_dir=model_root, image_size=self.img_size)
 		for fold in range(self.n_folds):
 
 			train_loader = preprocessor.get_dataloader(
@@ -287,8 +288,9 @@ class Learner(object):
 		seed_everything()
 		device = get_default_device()
 		preprocessor = PawPreprocessor(
-			root_dir=self.data_root, train=True, n_folds=self.n_folds, model_dir=self.model_root)
-		test_preprocessor = PawPreprocessor(root_dir=self.data_root, train=False)
+			root_dir=self.data_root, train=True, n_folds=self.n_folds, model_dir=self.model_root,
+			image_size=self.img_size)
+		test_preprocessor = PawPreprocessor(root_dir=self.data_root, train=False, image_size=self.img_size)
 
 		preds = None
 		model = self.model_type(

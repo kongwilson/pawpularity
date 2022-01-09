@@ -55,7 +55,7 @@ def infer(model_type, img_size=384, batch_size=4, embed_size=128, hidden_size=64
 
 	seed_everything()
 	device = get_default_device()
-	preprocessor = PawPreprocessor(root_dir=data_root, train=False)
+	preprocessor = PawPreprocessor(root_dir=data_root, train=False, image_size=img_size)
 	test_loader = preprocessor.get_dataloader()
 	model = model_type(3, len(preprocessor.features), embed_size, hidden_size, pretrained=False, fine_tune=fine_tune)
 
@@ -94,7 +94,7 @@ def infer_with_xgb(model_type, img_size=384, batch_size=4, embed_size=128, hidde
 
 	seed_everything()
 	device = get_default_device()
-	preprocessor = PawPreprocessor(root_dir=data_root, train=False)
+	preprocessor = PawPreprocessor(root_dir=data_root, train=False, image_size=img_size)
 	test_loader = preprocessor.get_dataloader()
 
 	model = model_type(3, len(preprocessor.features), embed_size, hidden_size, pretrained=False)
@@ -135,7 +135,7 @@ def infer_out_of_fold(model_type, img_size=384, batch_size=4, embed_size=128, hi
 	fold = 0
 	seed_everything()
 	device = get_default_device()
-	preprocessor = PawPreprocessor(root_dir=data_root, train=True, model_dir=model_root)
+	preprocessor = PawPreprocessor(root_dir=data_root, train=True, model_dir=model_root, image_size=img_size)
 	valid_img_paths, valid_dense, valid_targets = preprocessor.get_data(fold=fold, for_validation=True)
 
 	test_loader = preprocessor.get_dataloader(fold=fold, for_validation=True)

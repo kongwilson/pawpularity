@@ -110,8 +110,9 @@ def extract_intermediate_outputs_and_targets(model, data_loader):
 def xgb_to_the_result(model_type, img_size=384, batch_size=4, embed_size=128, hidden_size=64, n_folds=10):
 	seed_everything()
 	device = get_default_device()
-	preprocessor = PawPreprocessor(root_dir=data_root, train=True, n_folds=n_folds, model_dir=model_root)
-	test_preprocessor = PawPreprocessor(root_dir=data_root, train=False)
+	preprocessor = PawPreprocessor(
+		root_dir=data_root, train=True, n_folds=n_folds, model_dir=model_root, image_size=img_size)
+	test_preprocessor = PawPreprocessor(root_dir=data_root, train=False, image_size=img_size)
 
 	preds = None
 	model = model_type(3, len(preprocessor.features), embed_size, hidden_size)
@@ -223,7 +224,8 @@ def train_benchmark(model_type=PawSwinTransformerLarge4Patch12Win22k384, patienc
 	max_lr = 1e-3
 	min_lr = 1e-7
 	weight_decay = 1e-6
-	preprocessor = PawPreprocessor(root_dir=data_root, train=True, n_folds=n_folds, model_dir=model_root)
+	preprocessor = PawPreprocessor(
+		root_dir=data_root, train=True, n_folds=n_folds, model_dir=model_root, image_size=img_size)
 	device = get_default_device()
 
 	for fold in range(n_folds):
