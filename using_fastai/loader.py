@@ -19,7 +19,7 @@ import datetime
 from sklearn.model_selection import StratifiedKFold
 import math
 
-from utilities import *
+from utilities import RANDOM_SEED, data_root
 
 set_seed(RANDOM_SEED, reproducible=True)
 
@@ -41,7 +41,7 @@ def get_data(data, fold, timm_model_name='swin_large_patch4_window7_224_in22k'):
 		folder=os.path.join(data_root),
 		label_col='norm_score',
 		y_block=RegressionBlock,
-		bs=8,
+		bs=4,
 		num_workers=0,
 		item_tfms=Resize(img_size),
 		batch_tfms=setup_aug_tfms([Brightness(), Contrast(), Hue(), Saturation(), FlipItem()])
@@ -114,20 +114,21 @@ if __name__ == '__main__':
 		checkpoint_filename_petfinder = f'{checkpoint_filename}-petfinder_rmse'
 		checkpoint_filename_valid_loss = f'{checkpoint_filename}-valid_loss'
 		learn.fit_one_cycle(
-			20, lr, cbs=[
+			5, 2e-5, cbs=[
 				SaveModelCallback(
 					monitor='petfinder_rmse', fname=checkpoint_filename_petfinder, comp=np.less),
 				SaveModelCallback(
 					monitor='valid_loss', fname=checkpoint_filename_valid_loss, comp=np.less),
-				EarlyStoppingCallback(monitor='petfinder_rmse', min_delta=0.0, comp=np.less, patience=5)
+				EarlyStoppingCallback(monitor='petfinder_rmse', min_delta=0.0, comp=np.less, patience=2)
 			])
 
 		checkpoints = [checkpoint_filename_petfinder, checkpoint_filename_valid_loss]
+		remark = 'max_lr_2e-5+randome_seed_365+epochs_5+patience_2'
 		for checkpoint_name in checkpoints:
 			learn.load(checkpoint_filename_petfinder)
 			val_metrics = learn.validate()  # compute the validation loss and metrics
 			best_score = pd.DataFrame(
-				data=[[model_name, i] + val_metrics.items + [datetime.datetime.now(), checkpoint_name]],
+				data=[[model_name, i] + val_metrics.items + [datetime.datetime.now(), checkpoint_name, ]],
 				columns=['model_name', 'fold', 'valid_loss', 'petfinder_rmse', 'trained_time', 'checkpoint_name'])
 			save_best_score(best_score)
 
