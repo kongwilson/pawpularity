@@ -120,7 +120,7 @@ if __name__ == '__main__':
 		checkpoint_names = get_model_checkpoint_names(model_name, i, metric_name=None)
 		for cp_name in checkpoint_names:
 			learn.load(cp_name)
-			val_metrics = learn.validate()  # compute the validation loss and metrics
+			# val_metrics = learn.validate()  # compute the validation loss and metrics
 
 			dls = get_data(train_df, fold=i)
 
