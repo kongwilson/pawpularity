@@ -41,7 +41,7 @@ def get_data(data, fold, timm_model_name='swin_large_patch4_window7_224_in22k'):
 		folder=os.path.join(data_root),
 		label_col='norm_score',
 		y_block=RegressionBlock,
-		bs=16,
+		bs=8,
 		num_workers=0,
 		item_tfms=Resize(img_size),
 		batch_tfms=setup_aug_tfms([Brightness(), Contrast(), Hue(), Saturation(), FlipItem()])
@@ -78,7 +78,7 @@ def save_best_score(score_df: pd.DataFrame):
 
 
 if __name__ == '__main__':
-	model_name = 'swin_large_patch4_window12_384_in22k'
+	model_name = 'swin_large_patch4_window7_224_in22k'
 	train_df = pd.read_csv(os.path.join(data_root, 'train.csv'))
 	train_df['path'] = train_df['Id'].apply(lambda x: os.path.join('train', f'{x}.jpg'))
 	train_df = train_df.drop(columns=['Id'])
@@ -111,19 +111,26 @@ if __name__ == '__main__':
 		print(f'fold {i} learning rate found is {lr}')
 
 		checkpoint_filename = get_model_checkpoint_name(model_name, i)
+		checkpoint_filename_petfinder = f'{checkpoint_filename}-petfinder_rmse'
+		checkpoint_filename_valid_loss = f'{checkpoint_filename}-valid_loss'
 		learn.fit_one_cycle(
 			20, lr, cbs=[
 				SaveModelCallback(
-					monitor='petfinder_rmse', fname=checkpoint_filename, comp=np.less),
+					monitor='petfinder_rmse', fname=checkpoint_filename_petfinder, comp=np.less),
+				SaveModelCallback(
+					monitor='valid_loss', fname=checkpoint_filename_valid_loss, comp=np.less),
 				EarlyStoppingCallback(monitor='petfinder_rmse', min_delta=0.1, comp=np.less, patience=5)
 			])
 
-		learn.load(checkpoint_filename)
-		val_metrics = learn.validate()  # compute the validation loss and metrics
-		best_score = pd.DataFrame(
-			data=[[model_name, i] + val_metrics.items + [datetime.datetime.now()]],
-			columns=['model_name', 'fold', 'val_loss', 'petfinder_rmse', 'trained_time'])
-		save_best_score(best_score)
+		checkpoints = [checkpoint_filename_petfinder, checkpoint_filename_valid_loss]
+		for checkpoint_name in checkpoints:
+			learn.load(checkpoint_filename_petfinder)
+			val_metrics = learn.validate()  # compute the validation loss and metrics
+			best_score = pd.DataFrame(
+				data=[[model_name, i] + val_metrics.items + [datetime.datetime.now(), checkpoint_name]],
+				columns=['model_name', 'fold', 'valid_loss', 'petfinder_rmse', 'trained_time', 'checkpoint_name'])
+			save_best_score(best_score)
+
 		# learn = learn.to_fp32()
 
 		# learn.export(f'model_fold_{i}.pkl')
