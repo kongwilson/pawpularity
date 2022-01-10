@@ -25,7 +25,7 @@ train_dir = os.path.join(data_root, 'train')
 test_dir = os.path.join(data_root, 'test')
 
 # Random Seed Initialize
-RANDOM_SEED = 42
+RANDOM_SEED = 365
 DEVICE_INDEX = 0
 
 
