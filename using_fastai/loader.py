@@ -88,7 +88,7 @@ def save_best_score(score_df: pd.DataFrame):
 
 
 if __name__ == '__main__':
-	model_name = 'swin_large_patch4_window7_224_in22k'
+	model_name = 'swin_large_patch4_window12_384_in22k'
 	train_df = pd.read_csv(os.path.join(data_root, 'train.csv'))
 	train_df['path'] = train_df['Id'].apply(lambda x: os.path.join('train', f'{x}.jpg'))
 	train_df = train_df.drop(columns=['Id'])
@@ -138,7 +138,7 @@ if __name__ == '__main__':
 			learn.load(checkpoint_filename_petfinder)
 			val_metrics = learn.validate()  # compute the validation loss and metrics
 			best_score = pd.DataFrame(
-				data=[[model_name, i] + val_metrics.items + [datetime.datetime.now(), checkpoint_name, ]],
+				data=[[model_name, i] + val_metrics.items + [datetime.datetime.now(), checkpoint_name, remark]],
 				columns=['model_name', 'fold', 'valid_loss', 'petfinder_rmse', 'trained_time', 'checkpoint_name'])
 			save_best_score(best_score)
 
