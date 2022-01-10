@@ -119,7 +119,7 @@ if __name__ == '__main__':
 					monitor='petfinder_rmse', fname=checkpoint_filename_petfinder, comp=np.less),
 				SaveModelCallback(
 					monitor='valid_loss', fname=checkpoint_filename_valid_loss, comp=np.less),
-				EarlyStoppingCallback(monitor='petfinder_rmse', min_delta=0.1, comp=np.less, patience=5)
+				EarlyStoppingCallback(monitor='petfinder_rmse', min_delta=0.0, comp=np.less, patience=5)
 			])
 
 		checkpoints = [checkpoint_filename_petfinder, checkpoint_filename_valid_loss]
