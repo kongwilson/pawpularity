@@ -38,18 +38,18 @@ if __name__ == '__main__':
 		print(f'Fold {i} results')
 
 		learn = get_learner(train_df, fold=i, timm_model_name=model_name)
-		learn.load(get_model_checkpoint_name(model_name, i))
-		val_metrics = learn.validate()  # compute the validation loss and metrics
-		# learn.export(f'model_fold_{i}.pkl')
-		# learn.save(f'model_fold_{i}.pkl')
+		checkpoint_names = get_model_checkpoint_names(model_name, i, metric_name=None)
+		for cp_name in checkpoint_names:
+			learn.load(cp_name)
+			val_metrics = learn.validate()  # compute the validation loss and metrics
 
-		dls = get_data(train_df, fold=i)
+			dls = get_data(train_df, fold=i)
 
-		test_dl = dls.test_dl(test_df)
+			test_dl = dls.test_dl(test_df)
 
-		preds, _ = learn.tta(dl=test_dl, n=5, beta=0)
+			preds, _ = learn.tta(dl=test_dl, n=5, beta=0)
 
-		all_preds.append(preds)
+			all_preds.append(preds)
 
 		del learn
 

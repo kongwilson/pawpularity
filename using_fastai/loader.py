@@ -69,6 +69,15 @@ def get_model_checkpoint_name(timm_model_name, fold):
 	return f'{timm_model_name}-fold{fold}'
 
 
+def get_model_checkpoint_names(timm_model_name, fold, metric_name=None):
+	if metric_name is None:
+		all_models_checkpoints = glob.glob(os.path.join('models', f'{str(timm_model_name)}-fold[0-9]*.pth'))
+	else:
+		all_models_checkpoints = glob.glob(
+			os.path.join('models', f'{str(timm_model_name)}-fold[0-9]*-{metric_name}.pth'))
+	checkpoint_names = [os.path.basename(p).split('.')[0] for p in all_models_checkpoints]
+	return checkpoint_names
+
 def save_best_score(score_df: pd.DataFrame):
 	if os.path.exists('best_score.csv'):
 		best_scores = pd.read_csv('best_score.csv')
