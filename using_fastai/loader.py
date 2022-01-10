@@ -19,7 +19,7 @@ import datetime
 from sklearn.model_selection import StratifiedKFold
 import math
 
-from utilities import RANDOM_SEED, data_root, seed_everything
+from utilities import RANDOM_SEED, data_root, seed_everything, prediction_validity_check
 
 set_seed(RANDOM_SEED, reproducible=True)
 seed_everything()
