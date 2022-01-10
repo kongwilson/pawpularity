@@ -139,7 +139,8 @@ if __name__ == '__main__':
 			val_metrics = learn.validate()  # compute the validation loss and metrics
 			best_score = pd.DataFrame(
 				data=[[model_name, i] + val_metrics.items + [datetime.datetime.now(), checkpoint_name, remark]],
-				columns=['model_name', 'fold', 'valid_loss', 'petfinder_rmse', 'trained_time', 'checkpoint_name'])
+				columns=[
+					'model_name', 'fold', 'valid_loss', 'petfinder_rmse', 'trained_time', 'checkpoint_name', 'remark'])
 			save_best_score(best_score)
 
 		# learn = learn.to_fp32()
