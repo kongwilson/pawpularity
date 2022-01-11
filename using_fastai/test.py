@@ -88,7 +88,7 @@ def add_tabular_features_with_xgboosting(
 
 
 if __name__ == '__main__':
-	model_name = 'swin_large_patch4_window7_224_in22k'
+	model_name = 'swin_large_patch4_window12_384_in22k'
 	include_tabular = True
 
 	train_df = pd.read_csv(os.path.join(data_root, 'train.csv'))
