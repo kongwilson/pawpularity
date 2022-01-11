@@ -16,11 +16,12 @@ FEATURES = ['Subject Focus', 'Eyes', 'Face', 'Near', 'Action', 'Accessory', 'Gro
 
 
 def add_tabular_features_with_xgboosting(
-		learner: fastai.learner.Learner, train_val_data: pd.DataFrame, fold: int, model_name: str):
+		learner: fastai.learner.Learner, train_val_data: pd.DataFrame, fold: int, checkpoint_name: str):
 	mask = train_val_data['fold'] == fold
 	train = train_val_data[~mask].copy()
 	val = train_val_data[mask].copy()
-	fastai_loader = get_data(train_val_data, fold=fold)
+	timm_model_name = checkpoint_name.split('-')[0]
+	fastai_loader = get_data(train_val_data, fold=fold, timm_model_name=timm_model_name)
 	train_dl = fastai_loader.test_dl(train)
 	print('generate predicted outputs for training samples')
 	train_preds, _ = learner.tta(dl=train_dl, n=5, beta=0)
@@ -61,9 +62,9 @@ def add_tabular_features_with_xgboosting(
 
 		return rmse_val
 
-	study_db_path = os.path.join('models', f'{model_name}.db')
+	study_db_path = os.path.join('models', f'{checkpoint_name}.db')
 	study = optuna.create_study(
-		direction='minimize', study_name=model_name,
+		direction='minimize', study_name=checkpoint_name,
 		storage=f'sqlite:///{study_db_path}', load_if_exists=True)
 	study.optimize(loss_func, n_trials=200)
 	best_params = study.best_params
@@ -81,7 +82,7 @@ def add_tabular_features_with_xgboosting(
 	print(f'train rmse: {rmse_train}, val rmse: {rmse_val}')
 
 	model_path = os.path.join(
-		'models', f"XGB-{rmse_val:.5f}_{model_name}.json")
+		'models', f"XGB-{rmse_val:.5f}_{checkpoint_name}.json")
 	xgb_model.save_model(model_path)
 
 	return xgb_model
@@ -121,7 +122,8 @@ if __name__ == '__main__':
 		checkpoint_names = get_model_checkpoint_names(model_name, i, metric_name=None)
 		for cp_name in checkpoint_names:
 			learn.load(cp_name)
-			# val_metrics = learn.validate()  # compute the validation loss and metrics
+			val_metrics = learn.validate()  # compute the validation loss and metrics
+			print(val_metrics)
 
 			dls = get_data(train_df, fold=i, timm_model_name=model_name)
 
