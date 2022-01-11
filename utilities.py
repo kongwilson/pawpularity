@@ -153,15 +153,15 @@ def get_data(for_test=False):
 	return data
 
 
-def prediction_validity_check(preds):
+def prediction_validity_check(preds, max_val=100):
 	nan_mask = np.isnan(preds)
 	inf_mask = np.isinf(preds)
 	low_mask = preds < 0
-	high_mask = preds > 100
+	high_mask = preds > max_val
 	preds[nan_mask] = 0
-	preds[inf_mask] = 100
+	preds[inf_mask] = max_val
 	preds[low_mask] = 0
-	preds[high_mask] = 100
+	preds[high_mask] = max_val
 	return preds
 
 

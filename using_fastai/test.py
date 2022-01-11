@@ -22,8 +22,10 @@ def add_tabular_features_with_xgboosting(
 	val = train_val_data[mask].copy()
 	fastai_loader = get_data(train_val_data, fold=fold)
 	train_dl = fastai_loader.test_dl(train)
+	print('generate predicted outputs for training samples')
 	train_preds, _ = learner.tta(dl=train_dl, n=5, beta=0)
 	val_dl = fastai_loader.test_dl(val)
+	print('generate predicted outputs for validation samples')
 	val_preds, _ = learner.tta(dl=val_dl, n=5, beta=0)
 
 	train_feats = train[FEATURES].values
@@ -53,7 +55,7 @@ def add_tabular_features_with_xgboosting(
 		xgb_model = xgb.XGBRegressor(random_state=RANDOM_SEED, **params)
 		xgb_model.fit(xgb_train_x, xgb_train_y)
 		xgb_val_preds = xgb_model.predict(xgb_val_x)
-		xgb_val_preds = prediction_validity_check(xgb_val_preds)
+		xgb_val_preds = prediction_validity_check(xgb_val_preds, max_val=1)
 
 		rmse_val = round(mean_squared_error(xgb_val_y * 100, xgb_val_preds * 100, squared=False), 5)
 
@@ -63,7 +65,7 @@ def add_tabular_features_with_xgboosting(
 	study = optuna.create_study(
 		direction='minimize', study_name=model_name,
 		storage=f'sqlite:///{study_db_path}', load_if_exists=True)
-	study.optimize(loss_func, n_trials=20)
+	study.optimize(loss_func, n_trials=200)
 	best_params = study.best_params
 	print(f'the best model params are found on Trial #{study.best_trial.number}')
 	print(best_params)
@@ -78,9 +80,8 @@ def add_tabular_features_with_xgboosting(
 
 	print(f'train rmse: {rmse_train}, val rmse: {rmse_val}')
 
-	model_name = os.path.basename(model_path)
 	model_path = os.path.join(
-		model_root, f"XGB-{rmse_val:.5f}_{model_name}.json")
+		'models', f"XGB-{rmse_val:.5f}_{model_name}.json")
 	xgb_model.save_model(model_path)
 
 	return xgb_model
@@ -129,13 +130,14 @@ if __name__ == '__main__':
 			preds, _ = learn.tta(dl=test_dl, n=5, beta=0)
 
 			if include_tabular:
+				print('prepare to add tabular features')
 				xgb_model = add_tabular_features_with_xgboosting(learn, train_df, i, cp_name)
 				test_feats = test_df[FEATURES].values
 
 				xgb_test_x = np.concatenate((np.array(preds), test_feats), axis=1)
 
 				preds = xgb_model.predict(xgb_test_x)
-				preds = prediction_validity_check(preds)
+				preds = prediction_validity_check(preds, max_val=1)
 
 			all_preds.append(preds)
 
