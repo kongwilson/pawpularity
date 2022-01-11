@@ -123,7 +123,7 @@ if __name__ == '__main__':
 			learn.load(cp_name)
 			# val_metrics = learn.validate()  # compute the validation loss and metrics
 
-			dls = get_data(train_df, fold=i)
+			dls = get_data(train_df, fold=i, timm_model_name=model_name)
 
 			test_dl = dls.test_dl(test_df)
 
