@@ -119,7 +119,7 @@ if __name__ == '__main__':
 		print(f'Fold {i} results')
 
 		learn = get_learner(train_df, fold=i, timm_model_name=model_name)
-		checkpoint_names = get_model_checkpoint_names(model_name, i, metric_name=None)
+		checkpoint_names = get_model_checkpoint_names(model_name, i, metric_name='petfinder_rmse')
 		for cp_name in checkpoint_names:
 			learn.load(cp_name)
 			val_metrics = learn.validate()  # compute the validation loss and metrics
