@@ -162,8 +162,10 @@ if __name__ == '__main__':
 			val_preds, _ = learn.get_preds(dl=val_dl)
 			val_preds_tta *= 100
 			val_preds *= 100
-			print('val pred tta petfinder_rmse:', mean_squared_error(val_preds_tta, labels, squared=False))
-			print('val pred petfinder_rmse:', mean_squared_error(val_preds, labels, squared=False))
+			petfinder_rmse_tta = mean_squared_error(val_preds_tta, labels, squared=False)
+			petfinder_rmse_recal = mean_squared_error(val_preds, labels, squared=False)
+			print('val pred tta petfinder_rmse:', petfinder_rmse_tta)
+			print('val pred petfinder_rmse:', petfinder_rmse_recal)
 			xgb_val_rmse = None
 
 			if include_tabular:
@@ -180,7 +182,7 @@ if __name__ == '__main__':
 				data=[
 					[model_name, i] +
 					val_metrics.items +
-					[val_preds_tta, val_preds, xgb_val_rmse, datetime.datetime.now(), cp_name, dls.bs]],
+					[petfinder_rmse_tta, petfinder_rmse_recal, xgb_val_rmse, datetime.datetime.now(), cp_name, dls.bs]],
 				columns=[
 					'model_name', 'fold',
 					'valid_loss', 'petfinder_rmse', 'petfinder_rmse_tta', 'petfinder_rmse_recal', 'xgb_rmse',
