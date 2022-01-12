@@ -33,7 +33,7 @@ def add_tabular_features_with_xgboosting(
 	xgb_val_x = np.concatenate((np.array(val_preds), val_feats), axis=1)
 	xgb_val_y = val[['norm_score']].values
 
-	xgb_model_paths = glob.glob('models', f'*{str(checkpoint_name)}.json')
+	xgb_model_paths = glob.glob(os.path.join('models', f'*{str(checkpoint_name)}.json'))
 	if len(xgb_model_paths) > 0:
 		xgb_model = xgb.XGBRegressor()
 		xgb_model.load_model(xgb_model_paths[0])
