@@ -95,6 +95,8 @@ if __name__ == '__main__':
 
 	if model_name == 'bonky':
 		train_df = pd.read_csv('train_df.csv')
+		train_df['Id'] = train_df['path'].apply(lambda x: os.path.basename(x).split('.')[0])
+		train_df['path'] = train_df['Id'].apply(lambda x: os.path.join('train', f'{x}.jpg'))
 	else:
 		train_df = pd.read_csv(os.path.join(data_root, 'train.csv'))
 		train_df['path'] = train_df['Id'].apply(lambda x: os.path.join('train', f'{x}.jpg'))

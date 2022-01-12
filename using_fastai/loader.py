@@ -76,7 +76,7 @@ def get_model_checkpoint_name(timm_model_name, fold):
 
 def get_model_checkpoint_names(timm_model_name, fold, metric_name=None):
 	if metric_name is None:
-		all_models_checkpoints = glob.glob(os.path.join('models', f'{str(timm_model_name)}-fold[0-9]*.pth'))
+		all_models_checkpoints = glob.glob(os.path.join('models', f'{str(timm_model_name)}-fold{fold}*.pth'))
 	else:
 		all_models_checkpoints = glob.glob(
 			os.path.join('models', f'{str(timm_model_name)}-fold{fold}*-{metric_name}.pth'))
