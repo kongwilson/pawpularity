@@ -76,8 +76,8 @@ def add_tabular_features_with_xgboosting(
 	xgb_train_preds = xgb_model.predict(xgb_train_x)
 	xgb_val_preds = xgb_model.predict(xgb_val_x)
 
-	rmse_train = round(mean_squared_error(xgb_train_y, xgb_train_preds, squared=False), 5)
-	rmse_val = round(mean_squared_error(xgb_val_y, xgb_val_preds, squared=False), 5)
+	rmse_train = round(mean_squared_error(xgb_train_y * 100, xgb_train_preds * 100, squared=False), 5)
+	rmse_val = round(mean_squared_error(xgb_val_y * 100, xgb_val_preds * 100, squared=False), 5)
 
 	print(f'train rmse: {rmse_train}, val rmse: {rmse_val}')
 
@@ -85,13 +85,23 @@ def add_tabular_features_with_xgboosting(
 		'models', f"XGB-{rmse_val:.5f}_{checkpoint_name}.json")
 	xgb_model.save_model(model_path)
 
-	return xgb_model
+	return xgb_model, rmse_val
+
+
+def save_test_results(score_df: pd.DataFrame):
+	if os.path.exists('test_results.csv'):
+		test_results = pd.read_csv('test_results.csv')
+		test_results = test_results.append(score_df)
+	else:
+		test_results = score_df
+	test_results.to_csv('test_results.csv', index=False)
+
 
 
 if __name__ == '__main__':
 	model_name = 'bonky'  # bonky, swin_large_patch4_window12_384_in22k, swin_large_patch4_window7_224_in22k
 	include_tabular = True
-	metric_name = None
+	metric_name = None  # valid_loss, petfinder_rmse, None
 
 	if model_name == 'bonky':
 		N_FOLDS = 10
@@ -148,16 +158,28 @@ if __name__ == '__main__':
 			val_preds *= 100
 			print('val pred tta petfinder_rmse:', mean_squared_error(val_preds_tta, labels, squared=False))
 			print('val pred petfinder_rmse:', mean_squared_error(val_preds, labels, squared=False))
+			xgb_val_rmse = None
 
 			if include_tabular:
 				print('prepare to add tabular features')
-				xgb_model = add_tabular_features_with_xgboosting(learn, train_df, i, cp_name)
+				xgb_model, xgb_val_rmse = add_tabular_features_with_xgboosting(learn, train_df, i, cp_name)
 				test_feats = test_df[FEATURES].values
 
 				xgb_test_x = np.concatenate((np.array(preds), test_feats), axis=1)
 
 				preds = xgb_model.predict(xgb_test_x)
 				preds = prediction_validity_check(preds, max_val=1)
+
+			val_result = pd.DataFrame(
+				data=[
+					[model_name, i] +
+					val_metrics.items +
+					[val_preds_tta, val_preds, xgb_val_rmse, datetime.datetime.now(), cp_name, dls.bs]],
+				columns=[
+					'model_name', 'fold',
+					'valid_loss', 'petfinder_rmse', 'petfinder_rmse_tta', 'petfinder_rmse_recal', 'xgb_rmse',
+					'trained_time', 'checkpoint_name', 'batch_size'])
+			save_best_score(val_result)
 
 			all_preds.append(preds)
 
