@@ -150,7 +150,7 @@ if __name__ == '__main__':
 			val_preds_tta *= 100
 			val_preds *= 100
 			petfinder_rmse_tta = mean_squared_error(val_preds_tta, labels, squared=False)
-			petfinder_rmse_recal = mean_squared_error(val_preds_tta, labels, squared=False)
+			petfinder_rmse_recal = mean_squared_error(val_preds, labels, squared=False)
 			print('val pred tta petfinder_rmse:', petfinder_rmse_tta)
 			print('val pred petfinder_rmse:', petfinder_rmse_recal)
 
