@@ -94,6 +94,7 @@ if __name__ == '__main__':
 	metric_name = None
 
 	if model_name == 'bonky':
+		N_FOLDS = 10
 		train_df = pd.read_csv('train_df.csv')
 		train_df['Id'] = train_df['path'].apply(lambda x: os.path.basename(x).split('.')[0])
 		train_df['path'] = train_df['Id'].apply(lambda x: os.path.join('train', f'{x}.jpg'))
