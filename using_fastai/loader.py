@@ -17,6 +17,7 @@ import os
 import datetime
 
 from sklearn.model_selection import StratifiedKFold
+from sklearn.metrics import mean_squared_error
 import math
 
 from utilities import RANDOM_SEED, data_root, seed_everything, prediction_validity_check
@@ -138,24 +139,36 @@ if __name__ == '__main__':
 		for checkpoint_name in checkpoints:
 			learn.load(checkpoint_filename_petfinder)
 			val_metrics = learn.validate()  # compute the validation loss and metrics
+
+			dls = get_data(train_df, fold=i, timm_model_name=model_name)
+
+			val_df = train_df[train_df['fold'] == i].copy()
+			labels = val_df['Pawpularity'].values
+			val_dl = dls.test_dl(val_df)
+			val_preds_tta, _ = learn.tta(dl=val_dl, n=5, beta=0)
+			val_preds, _ = learn.get_preds(dl=val_dl)
+			val_preds_tta *= 100
+			val_preds *= 100
+			petfinder_rmse_tta = mean_squared_error(val_preds_tta, labels, squared=False)
+			petfinder_rmse_recal = mean_squared_error(val_preds_tta, labels, squared=False)
+			print('val pred tta petfinder_rmse:', petfinder_rmse_tta)
+			print('val pred petfinder_rmse:', petfinder_rmse_recal)
+
 			best_score = pd.DataFrame(
-				data=[[model_name, i] + val_metrics.items + [datetime.datetime.now(), checkpoint_name, remark]],
+				data=[
+					[model_name, i] +
+					val_metrics.items +
+					[petfinder_rmse_tta, petfinder_rmse_recal, datetime.datetime.now(), checkpoint_name, remark]],
 				columns=[
-					'model_name', 'fold', 'valid_loss', 'petfinder_rmse', 'trained_time', 'checkpoint_name', 'remark'])
+					'model_name', 'fold',
+					'valid_loss', 'petfinder_rmse', 'petfinder_rmse_tta', 'petfinder_rmse_recal',
+					'trained_time', 'checkpoint_name', 'remark'])
 			save_best_score(best_score)
 
 		# learn = learn.to_fp32()
 
 		# learn.export(f'model_fold_{i}.pkl')
 		# learn.save(f'model_fold_{i}.pkl')
-
-		dls = get_data(train_df, fold=i, timm_model_name=model_name)
-
-		test_dl = dls.test_dl(test_df)
-
-		preds, _ = learn.tta(dl=test_dl, n=5, beta=0)
-
-		all_preds.append(preds)
 
 		del learn
 
