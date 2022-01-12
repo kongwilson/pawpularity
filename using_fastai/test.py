@@ -18,32 +18,37 @@ FEATURES = ['Subject Focus', 'Eyes', 'Face', 'Near', 'Action', 'Accessory', 'Gro
 def add_tabular_features_with_xgboosting(
 		learner: fastai.learner.Learner, train_val_data: pd.DataFrame, fold: int, checkpoint_name: str):
 
-	xgb_model_paths = glob.glob('models', f'*{str(checkpoint_name)}.json')
-	if len(xgb_model_paths) > 0:
-		xgb_model = xgb.XGBRegressor()
-		xgb_model.load_model(xgb_model_paths[0])
-		return xgb_model
 
 	mask = train_val_data['fold'] == fold
 	train = train_val_data[~mask].copy()
 	val = train_val_data[mask].copy()
 	timm_model_name = checkpoint_name.split('-')[0]
+
 	fastai_loader = get_data(train_val_data, fold=fold, timm_model_name=timm_model_name)
-	train_dl = fastai_loader.test_dl(train)
-	print('generate predicted outputs for training samples')
-	train_preds, _ = learner.tta(dl=train_dl, n=5, beta=0)
 	val_dl = fastai_loader.test_dl(val)
 	print('generate predicted outputs for validation samples')
 	val_preds, _ = learner.tta(dl=val_dl, n=5, beta=0)
 
-	train_feats = train[FEATURES].values
 	val_feats = val[FEATURES].values
+	xgb_val_x = np.concatenate((np.array(val_preds), val_feats), axis=1)
+	xgb_val_y = val[['norm_score']].values
 
+	xgb_model_paths = glob.glob('models', f'*{str(checkpoint_name)}.json')
+	if len(xgb_model_paths) > 0:
+		xgb_model = xgb.XGBRegressor()
+		xgb_model.load_model(xgb_model_paths[0])
+		xgb_val_preds = xgb_model.predict(xgb_val_x)
+		rmse_val = round(mean_squared_error(xgb_val_y * 100, xgb_val_preds * 100, squared=False), 5)
+		return xgb_model, rmse_val
+
+	train_dl = fastai_loader.test_dl(train)
+	print('generate predicted outputs for training samples')
+	train_preds, _ = learner.tta(dl=train_dl, n=5, beta=0)
+
+	train_feats = train[FEATURES].values
 	xgb_train_x = np.concatenate((np.array(train_preds), train_feats), axis=1)
 	xgb_train_y = train[['norm_score']].values
 
-	xgb_val_x = np.concatenate((np.array(val_preds), val_feats), axis=1)
-	xgb_val_y = val[['norm_score']].values
 
 	def loss_func(trial: optuna.trial.Trial):
 		params = {
