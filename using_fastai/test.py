@@ -91,6 +91,7 @@ def add_tabular_features_with_xgboosting(
 if __name__ == '__main__':
 	model_name = 'swin_large_patch4_window12_384_in22k'
 	include_tabular = True
+	metric_name = 'petfinder_rmse'
 
 	train_df = pd.read_csv(os.path.join(data_root, 'train.csv'))
 	train_df['path'] = train_df['Id'].apply(lambda x: os.path.join('train', f'{x}.jpg'))
@@ -119,8 +120,9 @@ if __name__ == '__main__':
 		print(f'Fold {i} results')
 
 		learn = get_learner(train_df, fold=i, timm_model_name=model_name)
-		checkpoint_names = get_model_checkpoint_names(model_name, i, metric_name='petfinder_rmse')
+		checkpoint_names = get_model_checkpoint_names(model_name, i, metric_name=metric_name)
 		for cp_name in checkpoint_names:
+			print(f'loading {cp_name}')
 			learn.load(cp_name)
 			val_metrics = learn.validate()  # compute the validation loss and metrics
 			print(val_metrics)
