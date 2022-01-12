@@ -131,6 +131,14 @@ if __name__ == '__main__':
 
 			preds, _ = learn.tta(dl=test_dl, n=5, beta=0)
 
+			val_df = train_df[train_df['fold'] == i].copy()
+			labels = val_df['Pawpularity'].values
+			val_dl = dls.test_dl(val_df)
+			val_preds_tta = learn.tta(dl=val_dl, n=5, beta=0) * 100
+			val_preds = learn.predict(dl=val_dl) * 100
+			print('val pred tta petfinder_rmse:', mean_squared_error(val_preds_tta, labels, squared=False))
+			print('val pred petfinder_rmse:', mean_squared_error(val_preds, labels, squared=False))
+
 			if include_tabular:
 				print('prepare to add tabular features')
 				xgb_model = add_tabular_features_with_xgboosting(learn, train_df, i, cp_name)
