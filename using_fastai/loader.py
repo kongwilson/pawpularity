@@ -31,6 +31,8 @@ def get_data(data, fold, timm_model_name='swin_large_patch4_window7_224_in22k'):
 	data_fold['is_valid'] = data['fold'] == fold
 	if timm_model_name == 'swin_large_patch4_window7_224_in22k':
 		img_size = 224
+	elif timm_model_name == 'bonky':
+		img_size = 224
 	else:
 		img_size = 384
 
@@ -56,6 +58,8 @@ def get_learner(data, fold, timm_model_name='swin_large_patch4_window7_224_in22k
 	dls = get_data(data, fold, timm_model_name=timm_model_name)
 	if timm_model_name == 'swin_large_patch4_window12_384_in22k':
 		model = timm.models.swin_large_patch4_window12_384_in22k(pretrained=True, num_classes=dls.c)
+	elif timm_model_name == 'bonky':
+		model = timm.models.swin_large_patch4_window7_224_in22k(pretrained=True, num_classes=dls.c)
 	else:
 		model = timm.models.swin_large_patch4_window7_224_in22k(pretrained=True, num_classes=dls.c)
 	learner = Learner(dls, model, loss_func=BCEWithLogitsLossFlat(), metrics=petfinder_rmse).to_fp16()

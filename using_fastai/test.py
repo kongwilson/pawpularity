@@ -89,9 +89,9 @@ def add_tabular_features_with_xgboosting(
 
 
 if __name__ == '__main__':
-	model_name = 'swin_large_patch4_window12_384_in22k'
+	model_name = 'bonky'  # bonky, swin_large_patch4_window12_384_in22k, swin_large_patch4_window7_224_in22k
 	include_tabular = True
-	metric_name = 'petfinder_rmse'
+	metric_name = None
 
 	train_df = pd.read_csv(os.path.join(data_root, 'train.csv'))
 	train_df['path'] = train_df['Id'].apply(lambda x: os.path.join('train', f'{x}.jpg'))
