@@ -17,6 +17,13 @@ FEATURES = ['Subject Focus', 'Eyes', 'Face', 'Near', 'Action', 'Accessory', 'Gro
 
 def add_tabular_features_with_xgboosting(
 		learner: fastai.learner.Learner, train_val_data: pd.DataFrame, fold: int, checkpoint_name: str):
+
+	xgb_model_paths = glob.glob('models', f'*{str(checkpoint_name)}.json')
+	if len(xgb_model_paths) > 0:
+		xgb_model = xgb.XGBRegressor()
+		xgb_model.load_model(xgb_model_paths[0])
+		return xgb_model
+
 	mask = train_val_data['fold'] == fold
 	train = train_val_data[~mask].copy()
 	val = train_val_data[mask].copy()
@@ -95,7 +102,6 @@ def save_test_results(score_df: pd.DataFrame):
 	else:
 		test_results = score_df
 	test_results.to_csv('test_results.csv', index=False)
-
 
 
 if __name__ == '__main__':
@@ -179,7 +185,7 @@ if __name__ == '__main__':
 					'model_name', 'fold',
 					'valid_loss', 'petfinder_rmse', 'petfinder_rmse_tta', 'petfinder_rmse_recal', 'xgb_rmse',
 					'trained_time', 'checkpoint_name', 'batch_size'])
-			save_best_score(val_result)
+			save_test_results(val_result)
 
 			all_preds.append(preds)
 
