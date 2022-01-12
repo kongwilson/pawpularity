@@ -134,8 +134,10 @@ if __name__ == '__main__':
 			val_df = train_df[train_df['fold'] == i].copy()
 			labels = val_df['Pawpularity'].values
 			val_dl = dls.test_dl(val_df)
-			val_preds_tta = learn.tta(dl=val_dl, n=5, beta=0) * 100
-			val_preds = learn.predict(dl=val_dl) * 100
+			val_preds_tta, _ = learn.tta(dl=val_dl, n=5, beta=0)
+			val_preds, _ = learn.get_preds(dl=val_dl)
+			val_preds_tta *= 100
+			val_preds *= 100
 			print('val pred tta petfinder_rmse:', mean_squared_error(val_preds_tta, labels, squared=False))
 			print('val pred petfinder_rmse:', mean_squared_error(val_preds, labels, squared=False))
 
